@@ -1,0 +1,39 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>GenAI Chatbot Front Page</title>
+    <link rel="stylesheet" href="{% static 'predict_best_options/css/styles.css' %}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+    <h1>Welcome to GenAI Chatbot</h1>
+
+    <!-- Audio Upload Form -->
+    <div class="upload-section">
+        <h2>Provide Real-Time Audio Dialogue and Company Description</h2>
+        
+        <!-- Company Description Field -->
+        <h3>Company Description</h3>
+        <textarea id="company_description" placeholder="Enter a description of your company..." required></textarea>
+
+        <!-- Audio Recording Controls -->
+        <div class="recording-controls">
+            <button id="start-recording">Start Recording</button>
+            <button id="stop-recording" disabled>Stop Recording</button>
+        </div>
+
+        <!-- Hidden input to submit audio file -->
+        <form method="post" action="{% url 'process_audio' %}" enctype="multipart/form-data" id="audio-form">
+            {% csrf_token %}
+            <input type="file" id="audio-file" name="audio_file" style="display: none;">
+            <input type="hidden" id="company-description-input" name="company_description">
+            <button type="submit" id="submit-audio" disabled>Submit</button>
+        </form>
+    </div>
+
+    <script src="{% static 'predict_best_options/js/main.js' %}"></script>
+</body>
+</html>
