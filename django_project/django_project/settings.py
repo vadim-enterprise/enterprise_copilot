@@ -28,7 +28,7 @@ OPENAI_API_KEY = "sk-"
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['52.21.100.31', 'www.b2bappstore.click']
 
 # Application definition
 
@@ -40,7 +40,8 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
-    "predict_best_option"
+    "predict_best_option",
+    "channels"
 ]
 
 MIDDLEWARE = [
@@ -53,7 +54,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = "django_webapp.urls"
+ROOT_URLCONF = "django_project.urls"
 
 TEMPLATES = [
     {
@@ -71,8 +72,8 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "django_webapp.wsgi.application"
-
+WSGI_APPLICATION = "django_project.wsgi.application"
+ASGI_APPLICATION = "django_project.asgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
