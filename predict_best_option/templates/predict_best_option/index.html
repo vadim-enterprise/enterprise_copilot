@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <title>GenAI Chatbot Front Page</title>
-    <link rel="stylesheet" href="{% static 'predict_best_options/css/styles.css' %}">
+    <link rel="stylesheet" href="{% static 'predict_best_option/css/style.css' %}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
@@ -30,10 +30,14 @@
             {% csrf_token %}
             <input type="file" id="audio-file" name="audio_file" style="display: none;">
             <input type="hidden" id="company-description-input" name="company_description">
-            <button type="submit" id="submit-audio" disabled>Submit</button>
+            <button type="submit" id="submit-audio">Submit</button>
         </form>
     </div>
 
-    <script src="{% static 'predict_best_options/js/main.js' %}"></script>
+    <script>
+        // Add this script to make the CSRF token available to your JavaScript
+        var csrftoken = '{{ csrf_token }}';
+    </script>
+    <script src="{% static 'predict_best_option/js/main.js' %}"></script>
 </body>
 </html>

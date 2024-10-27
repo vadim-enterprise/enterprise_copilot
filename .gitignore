@@ -7,7 +7,7 @@
 *.wav
 
 # Byte-compiled / optimized / DLL files
-/__pycache__/
+__pycache__/
 *.py[cod]
 *$py.class
 
@@ -17,12 +17,10 @@
 data/
 
 #Environment folders
-llama_env/
+/django_venv/
 
-#Django folders
-assets/
-migrations/
-django_project/__pycache__/
+#Assets folder
+/assets/
 
 # Distribution / packaging
 .Python
