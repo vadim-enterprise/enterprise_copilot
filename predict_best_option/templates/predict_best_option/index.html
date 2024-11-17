@@ -1,4 +1,5 @@
 {% load static %}
+{% csrf_token %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,36 +9,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
-
     <h1>Welcome to GenAI Chatbot</h1>
-
-    <!-- Audio Upload Form -->
-    <div class="upload-section">
-        <h2>Provide Real-Time Audio Dialogue and Company Description</h2>
-        
-        <!-- Company Description Field -->
-        <h3>Company Description</h3>
-        <textarea id="company_description" placeholder="Enter a description of your company..." required></textarea>
-
-        <!-- Audio Recording Controls -->
-        <div class="recording-controls">
-            <button id="start-recording">Start Recording</button>
-            <button id="stop-recording" disabled>Stop Recording</button>
+    
+    <!-- Transcription Section -->
+    <div class="transcription-section">
+        <div class="transcription-box">
+            <h2>Real-Time Transcription</h2>
+            <div class="controls">
+                <button id="start-recording">Start Recording</button>
+                <button id="stop-recording" disabled>Stop Recording</button>
+            </div>
+            <div id="transcription-output" style="min-height: 100px; max-height: 300px; overflow-y: auto; padding: 10px; border: 1px solid #ccc; margin: 10px 0;">
+                Waiting to start...
+            </div>
+            <div class="transcription-controls">
+                <button id="copyTranscription" class="btn btn-secondary">Copy Transcription</button>
+                <button id="clearTranscription" onclick="clearTranscription()">Clear</button>
+            </div>
         </div>
-
-        <!-- Hidden input to submit audio file -->
-        <form method="post" action="{% url 'process_audio' %}" enctype="multipart/form-data" id="audio-form">
-            {% csrf_token %}
-            <input type="file" id="audio-file" name="audio_file" style="display: none;">
-            <input type="hidden" id="company-description-input" name="company_description">
-            <button type="submit" id="submit-audio">Submit</button>
-        </form>
     </div>
 
-    <script>
-        // Add this script to make the CSRF token available to your JavaScript
-        var csrftoken = '{{ csrf_token }}';
-    </script>
+    <!-- Insights Section (removed button, only showing output) -->
+    <div id="insights-output"></div>
+
     <script src="{% static 'predict_best_option/js/main.js' %}"></script>
 </body>
 </html>

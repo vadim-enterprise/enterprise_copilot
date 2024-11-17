@@ -10,11 +10,27 @@ from pydub import AudioSegment
 import os
 import tempfile
 import logging
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import ensure_csrf_cookie
+import json
+from django.template.loader import get_template
+from django.views.decorators.cache import never_cache
 
 logger = logging.getLogger(__name__)
 
+@never_cache  # Add this decorator
 def index(request):
-    return render(request, 'predict_best_option/index.html')
+    try:
+        template = get_template('predict_best_option/index.html')
+        logger.info(f"Loading template from: {template.origin.name}")
+        response = render(request, 'predict_best_option/index.html')
+        response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response['Pragma'] = 'no-cache'
+        response['Expires'] = '0'
+        return response
+    except Exception as e:
+        logger.error(f"Error loading template: {str(e)}")
+        raise
 
 @require_http_methods(["GET", "POST"])
 def process_audio(request):
@@ -22,52 +38,28 @@ def process_audio(request):
         logger.info("Received POST request")
         try:
             audio_file = request.FILES.get('audio_file')
-            company_description = request.POST.get('company_description')
             
-            if not audio_file or not company_description:
-                logger.error("Missing audio file or company description")
-                return JsonResponse({"error": "Missing audio file or company description"}, status=400)
+            if not audio_file:
+                logger.error("Missing audio file")
+                return JsonResponse({"error": "Missing audio file"}, status=400)
 
             logger.info(f"Received audio file: {audio_file.name}")
             logger.info(f"Audio file size: {audio_file.size} bytes")
-            logger.info(f"Received company description: {company_description}")
 
             # Create a temporary directory
             with tempfile.TemporaryDirectory() as temp_dir:
-                # Save the uploaded file to the temporary directory
-                temp_audio_path = os.path.join(temp_dir, audio_file.name)
-                with open(temp_audio_path, 'wb+') as destination:
-                    for chunk in audio_file.chunks():
-                        destination.write(chunk)
+                # ... rest of the audio processing code ...
 
-                logger.info(f"Saved audio file to: {temp_audio_path}")
-
-                # Convert the audio to WAV format using pydub
-                audio = AudioSegment.from_file(temp_audio_path)
-                wav_path = os.path.join(temp_dir, 'converted_audio.wav')
-                audio.export(wav_path, format="wav")
-
-                logger.info(f"Converted audio to WAV: {wav_path}")
-
-                # Transcribe the converted WAV file
-                transcribed_text = transcribe_audio(wav_path)
-                logger.info(f"Transcribed text: {transcribed_text}")
-
-                # Initialize OpenAI client
-                client = OpenAI(api_key=settings.OPENAI_API_KEY)
-
-                # Generate the summary, insights, and recommendations
+                # Generate the summary and insights
                 summary_output = ask_chatgpt(client, f"Summarize the following text: {transcribed_text}")
                 insights_output = ask_chatgpt(client, f"Provide key insights from the following text: {transcribed_text}")
-                recommendations_output = ask_chatgpt(client, f"Based on this transcription and the company description: {company_description}, provide recommendations for the company")
 
                 logger.info("Successfully processed audio and generated outputs")
 
                 return JsonResponse({
                     'transcribed_text': transcribed_text,
                     'summary_output': summary_output,
-                    'insights_output': insights_output,
-                    'recommendations_output': recommendations_output,
+                    'insights_output': insights_output
                 })
 
         except Exception as e:
@@ -121,3 +113,41 @@ def ask_chatgpt(client, prompt):
     except Exception as e:
         logger.exception(f"Unexpected error in ChatGPT API call: {str(e)}")
         return f"An unexpected error occurred: {str(e)}"
+    
+@require_http_methods(["POST"])
+@ensure_csrf_cookie
+def generate_insights(request):
+    try:
+        data = json.loads(request.body)
+        transcription = data.get('transcription')
+
+        if not transcription:
+            return JsonResponse({
+                'error': 'Missing transcription'
+            }, status=400)
+
+        # Initialize OpenAI client
+        client = OpenAI(api_key=settings.OPENAI_API_KEY)
+
+        # Generate insights directly from transcription
+        insights = ask_chatgpt(client, f"""
+            Analyze the following conversation and provide key insights and a brief summary:
+            
+            {transcription}
+            
+            Please format your response in a clear, concise manner.
+            """)
+
+        return JsonResponse({
+            'insights': insights
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'error': 'Invalid JSON data'
+        }, status=400)
+    except Exception as e:
+        logger.exception('Error generating insights')
+        return JsonResponse({
+            'error': str(e)
+        }, status=500)

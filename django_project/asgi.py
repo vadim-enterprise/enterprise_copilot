@@ -1,16 +1,34 @@
-"""
-ASGI config for django_project project.
+# import os
+# from django.core.asgi import get_asgi_application
+# from channels.routing import ProtocolTypeRouter, URLRouter
+# from channels.auth import AuthMiddlewareStack
+# from django.urls import path
+# from predict_best_option.transcription import Transcription
 
-It exposes the ASGI callable as a module-level variable named ``application``.
+# os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'django_project.settings')
 
-For more information on this file, see
-https://docs.djangoproject.com/en/5.1/howto/deployment/asgi/
-"""
+# application = ProtocolTypeRouter({
+#     "http": get_asgi_application(),
+#     "websocket": AuthMiddlewareStack(
+#         URLRouter([
+#             path("ws/transcribe/", Transcription.as_asgi()),
+#         ])
+#     ),
+# })
 
 import os
-
 from django.core.asgi import get_asgi_application
+from channels.routing import ProtocolTypeRouter, URLRouter
+from channels.auth import AuthMiddlewareStack
+from predict_best_option.routing import websocket_urlpatterns
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'django_project.settings')
 
-application = get_asgi_application()
+application = ProtocolTypeRouter({
+    "http": get_asgi_application(),
+    "websocket": AuthMiddlewareStack(
+        URLRouter(
+            websocket_urlpatterns
+        )
+    ),
+})
