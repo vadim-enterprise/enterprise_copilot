@@ -1,39 +1,33 @@
+// Global variables
+let recognition;
+let isRecording = false;
+let socket;
+let mediaRecorder;
+let wsRetryCount = 0;
+const MAX_RETRIES = 3;
+let transcriptionBuffer = '';
+let lastUpdateTime = Date.now();
+const UPDATE_INTERVAL = 100; // Update every 100ms
+let finalTranscript = '';
+
+// DOM Elements
+const elements = {
+    startButton: document.getElementById('start-recording'),
+    stopButton: document.getElementById('stop-recording'),
+    transcriptionOutput: document.getElementById('transcription-output'),
+    summaryOutput: document.getElementById('summary-output'),
+    insightsOutput: document.getElementById('insights-output'),
+    resetButton: document.getElementById('reset-conversation')
+};
+
 try {
     document.addEventListener('DOMContentLoaded', (event) => {
-
-        const elements = {
-            startButton: document.getElementById('start-recording'),
-            stopButton: document.getElementById('stop-recording'),
-            transcriptionOutput: document.getElementById('transcription-output'),
-            insightsOutput: document.getElementById('insights-output'),
-            copyButton: document.getElementById('copyTranscription'),
-            clearButton: document.getElementById('clearTranscription')
-        };
-
+        // Validate required elements
         Object.entries(elements).forEach(([name, element]) => {
             if (!element) {
                 throw new Error(`Required element ${name} not found`);
             }
-        });        
-
-        let socket;
-        let recognition = null;
-        let wsRetryCount = 0;
-        const MAX_RETRIES = 5;
-        let isRecording = false;
-        let finalTranscript = '';        
-
-        function copyTranscription() {
-            const text = elements.transcriptionOutput.innerText;
-            navigator.clipboard.writeText(text)
-                .then(() => {
-                    alert('Transcription copied to clipboard!');
-                })
-                .catch(err => {
-                    console.error('Failed to copy text:', err);
-                    alert('Failed to copy text. Please try again.');
-                });
-        }
+        });
 
         function getCSRFToken() {
             let cookieValue = null;
@@ -48,7 +42,6 @@ try {
                 }
             }
             if (!cookieValue) {
-                // Fallback to getting token from the DOM
                 const tokenElement = document.querySelector('[name=csrfmiddlewaretoken]');
                 if (tokenElement) {
                     cookieValue = tokenElement.value;
@@ -127,7 +120,6 @@ try {
                 };
         
                 return recognition;
-        
             } catch (error) {
                 console.error('Error initializing speech recognition:', error);
                 elements.transcriptionOutput.textContent = 'Error initializing speech recognition';
@@ -144,20 +136,11 @@ try {
                     currentText = '';
                 }
                 
-                // Update display with buffered text
                 elements.transcriptionOutput.innerText = (currentText + transcriptionBuffer).trim();
-                
-                // Clear buffer
                 transcriptionBuffer = '';
-                
-                // Auto-scroll
                 elements.transcriptionOutput.scrollTop = elements.transcriptionOutput.scrollHeight;
             }
         }
-
-        let transcriptionBuffer = '';
-        let lastUpdateTime = Date.now();
-        const UPDATE_INTERVAL = 100; // Update every 100ms
         
         function setupWebSocket() {
             if (wsRetryCount >= MAX_RETRIES) {
@@ -189,7 +172,6 @@ try {
                         } else if (data.status === 'transcription' && data.text) {
                             console.log('Transcription received:', data.text);
                             
-                            // Update the display immediately with new text
                             let currentText = elements.transcriptionOutput.innerText;
                             if (currentText === 'Listening...' || 
                                 currentText === 'Waiting to start...' ||
@@ -197,8 +179,6 @@ try {
                                 currentText = '';
                             }
                             elements.transcriptionOutput.innerText = (currentText + ' ' + data.text).trim();
-                            
-                            // Auto-scroll
                             elements.transcriptionOutput.scrollTop = elements.transcriptionOutput.scrollHeight;
                         }
                     } catch (error) {
@@ -210,104 +190,41 @@ try {
                     console.error('WebSocket error:', error);
                 };
         
-                socket.onclose = function(event) {
-                    console.log('WebSocket connection closed:', event);
-                    if (!event.wasClean) {
+                socket.onclose = function(e) {
+                    console.log('WebSocket connection closed');
+                    if (isRecording) {
                         wsRetryCount++;
-                        if (wsRetryCount < MAX_RETRIES) {
-                            console.log('Attempting to reconnect...');
-                            setTimeout(setupWebSocket, 2000);
-                        }
+                        console.log(`Retrying WebSocket connection (${wsRetryCount}/${MAX_RETRIES})`);
+                        setupWebSocket();
                     }
                 };
         
                 return socket;
             } catch (error) {
-                console.error('Error creating WebSocket:', error);
+                console.error('Error setting up WebSocket:', error);
                 return null;
             }
         }
 
-        function sendAudioChunk(blob) {
-            if (socket && socket.readyState === WebSocket.OPEN) {
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                    const base64data = reader.result.split(',')[1];
-                    socket.send(JSON.stringify({
-                        audio_data: base64data,
-                        format: 'raw',
-                        sample_rate: 44100,
-                        channels: 1
-                    }));
-                };
-                reader.readAsDataURL(blob);
-            }
-        }
-
         function startRecording() {
-            console.log('Starting recording...');
-            wsRetryCount = 0;
-            isRecording = true;
-            finalTranscript = ''; 
-            elements.transcriptionOutput.innerHTML = '';
-        
-            if (recognition) {
-                try {
-                    recognition.start();
-                    console.log('Recognition started successfully');
-                } catch (error) {
-                    console.error('Error starting recognition:', error);
-                    if (error.name === 'InvalidStateError') {
-                        recognition.stop();
-                        setTimeout(() => recognition.start(), 50);
-                    }
-                }
-            }
-        
-            navigator.mediaDevices.getUserMedia({
-                audio: {
-                    echoCancellation: true,
-                    noiseSuppression: true,
-                    autoGainControl: true,
-                    sampleRate: 44100,  
-                    channelCount: 1
-                }
-            })
+            elements.transcriptionOutput.textContent = 'Connecting to transcription service...';
+            
+            navigator.mediaDevices.getUserMedia({ audio: true })
             .then(stream => {
-                try {
-                    const mediaRecorderOptions = {
-                        mimeType: 'audio/webm;codecs=opus',
-                        bitsPerSecond: 128000,
-                        audioBitsPerSecond: 128000
+                this.stream = stream;
+                this.mediaRecorder = new MediaRecorder(stream);
+                
+                setupWebSocket();
+                initializeSpeechRecognition();
+                
+                if (recognition) {
+                    try {
+                        recognition.start();
+                        elements.transcriptionOutput.textContent = 'Listening...';
+                    } catch (error) {
+                        console.error('Error starting recognition:', error);
+                        elements.transcriptionOutput.textContent = 'Error starting recognition: ' + error.message;
                     }
-        
-                    mediaRecorder = new MediaRecorder(stream, mediaRecorderOptions);
-                    console.log('MediaRecorder initialized with options:', mediaRecorderOptions);
-        
-                    let chunks = [];
-                    mediaRecorder.ondataavailable = (e) => {
-                        if (e.data.size > 0) {
-                            chunks.push(e.data);
-                            if (chunks.length >= 3) {  
-                                const blob = new Blob(chunks, { type: mediaRecorderOptions.mimeType });
-                                chunks = [];
-                                sendAudioChunk(blob);
-                            }
-                        }
-                    };
-        
-                    mediaRecorder.start(50);
-                    this.mediaRecorder = mediaRecorder;
-                    this.stream = stream;
-        
-                    elements.startButton.disabled = true;
-                    elements.stopButton.disabled = false;
-        
-                    socket = setupWebSocket();
-                }
-                 catch (error) {
-                    console.error('MediaRecorder initialization error:', error);
-                    elements.transcriptionOutput.textContent = 'Error initializing recording: ' + error.message;
                 }
             })
             .catch(error => {
@@ -342,7 +259,44 @@ try {
             
             elements.startButton.disabled = false;
             elements.stopButton.disabled = true;
+        }
 
+        function resetConversation() {
+            if (!confirm('Are you sure you want to reset the conversation? This will clear all current data.')) {
+                return;
+            }
+        
+            elements.summaryOutput.innerHTML = '';
+            elements.insightsOutput.innerHTML = '';
+            elements.transcriptionOutput.innerHTML = 'Waiting to start...';
+        
+            if (elements.stopButton && !elements.stopButton.disabled) {
+                elements.stopButton.click();
+            }
+            
+            elements.startButton.disabled = false;
+            elements.stopButton.disabled = true;
+            
+            finalTranscript = '';
+            transcriptionBuffer = '';
+        
+            fetch('/reset_conversation/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken(),
+                },
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to reset conversation history');
+                }
+                console.log('Conversation history reset successfully');
+            })
+            .catch(error => {
+                console.error('Error resetting conversation:', error);
+                alert('Error resetting conversation. Please try again.');
+            });
         }
 
         function startTranscriptionUpdates() {
@@ -359,10 +313,6 @@ try {
             requestAnimationFrame(update);
         }        
 
-        function clearTranscription() {
-            finalTranscript = ''; 
-            elements.transcriptionOutput.innerHTML = 'Waiting to start...';
-        }
         function debounce(func, wait) {
             let timeout;
             return function executedFunction(...args) {
@@ -375,9 +325,7 @@ try {
             };
         }
         
-        // Add new function for real-time insights
         const generateRealTimeInsights = debounce((transcription) => {
-            // Remove the company reference that was here
             if (!transcription || 
                 transcription === 'Waiting to start...' || 
                 transcription === 'Listening...' ||
@@ -385,11 +333,13 @@ try {
                 return;
             }
         
+            elements.summaryOutput.innerHTML = 'Generating summary...';
             elements.insightsOutput.innerHTML = 'Generating insights...';
         
             const csrftoken = getCSRFToken();
             if (!csrftoken) {
                 console.error('CSRF token not found');
+                elements.summaryOutput.innerHTML = 'Error: CSRF token not found. Please refresh the page.';
                 elements.insightsOutput.innerHTML = 'Error: CSRF token not found. Please refresh the page.';
                 return;
             }
@@ -416,28 +366,44 @@ try {
                 return response.json();
             })
             .then(data => {
-                if (!data || !data.insights) {
-                    throw new Error('Invalid response format');
+                console.log('Parsed response data:', data);
+        
+                if (!data) {
+                    throw new Error('Empty response from server');
                 }
-                elements.insightsOutput.innerHTML = data.insights;
+        
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+        
+                if (typeof data.summary === 'string') {
+                    elements.summaryOutput.innerHTML = data.summary;
+                } else {
+                    elements.summaryOutput.innerHTML = 'No summary available';
+                }
+                
+                if (typeof data.insights === 'string') {
+                    elements.insightsOutput.innerHTML = data.insights;
+                } else {
+                    elements.insightsOutput.innerHTML = 'No insights available';
+                }
+        
+                console.log('Successfully updated UI with insights and summary');
             })
             .catch(error => {
                 console.error('Error generating insights:', error);
-                elements.insightsOutput.innerHTML = `Error generating insights: ${error.message}`;
+                elements.summaryOutput.innerHTML = `Error: ${error.message}`;
+                elements.insightsOutput.innerHTML = `Error: ${error.message}`;
             });
         }, 2000);
         
-        // Add all event listeners
-        function initializeEventListeners() {
-            elements.startButton.addEventListener('click', startRecording);
-            elements.stopButton.addEventListener('click', stopRecording);
-            elements.clearButton.addEventListener('click', clearTranscription);
-            elements.copyButton.addEventListener('click', copyTranscription);
-        }
         // Initialize everything
         initializeSpeechRecognition();
-        initializeEventListeners();    
-
+        
+        // Add event listeners
+        elements.startButton.addEventListener('click', startRecording);
+        elements.stopButton.addEventListener('click', stopRecording);
+        elements.resetButton.addEventListener('click', resetConversation);
     });
 } catch (error) {
     console.error('Critical error during setup:', error);

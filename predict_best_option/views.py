@@ -32,41 +32,33 @@ def index(request):
         logger.error(f"Error loading template: {str(e)}")
         raise
 
-@require_http_methods(["GET", "POST"])
-def process_audio(request):
-    if request.method == 'POST':
-        logger.info("Received POST request")
-        try:
-            audio_file = request.FILES.get('audio_file')
+PROMPTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'prompts')
+
+def load_prompt(filename):
+    """Load a prompt file from the prompts directory."""
+    try:
+        file_path = os.path.join(PROMPTS_DIR, filename)
+        logger.info(f"Attempting to load prompt file: {file_path}")
+        
+        # Check if directory exists
+        if not os.path.exists(PROMPTS_DIR):
+            logger.error(f"Prompts directory not found: {PROMPTS_DIR}")
+            raise FileNotFoundError(f"Prompts directory not found: {PROMPTS_DIR}")
+        
+        # Check if file exists
+        if not os.path.exists(file_path):
+            logger.error(f"Prompt file not found: {file_path}")
+            raise FileNotFoundError(f"Prompt file not found: {file_path}")
+        
+        # Read the file
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read().strip()
+            logger.info(f"Successfully loaded prompt file: {filename}")
+            return content
+    except Exception as e:
+        logger.error(f"Error loading prompt file {filename}: {str(e)}")
+        raise
             
-            if not audio_file:
-                logger.error("Missing audio file")
-                return JsonResponse({"error": "Missing audio file"}, status=400)
-
-            logger.info(f"Received audio file: {audio_file.name}")
-            logger.info(f"Audio file size: {audio_file.size} bytes")
-
-            # Create a temporary directory
-            with tempfile.TemporaryDirectory() as temp_dir:
-                # ... rest of the audio processing code ...
-
-                # Generate the summary and insights
-                summary_output = ask_chatgpt(client, f"Summarize the following text: {transcribed_text}")
-                insights_output = ask_chatgpt(client, f"Provide key insights from the following text: {transcribed_text}")
-
-                logger.info("Successfully processed audio and generated outputs")
-
-                return JsonResponse({
-                    'transcribed_text': transcribed_text,
-                    'summary_output': summary_output,
-                    'insights_output': insights_output
-                })
-
-        except Exception as e:
-            logger.exception(f"Error in process_audio: {str(e)}")
-            return JsonResponse({"error": f"Server error: {str(e)}"}, status=500)
-
-    return render(request, 'predict_best_option/index.html')
 
 def transcribe_audio(file_path):
     logger.info(f"Starting audio transcription for file: {file_path}")
@@ -88,9 +80,9 @@ def ask_chatgpt(client, prompt):
     logger.info(f"Sending request to ChatGPT with prompt: {prompt[:50]}...")  # Log first 50 chars of prompt
     try:
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
-            temperature=0,
+            temperature=0.3,
             max_tokens=1000
         )
         logger.info("Received response from ChatGPT")
@@ -118,6 +110,17 @@ def ask_chatgpt(client, prompt):
 @ensure_csrf_cookie
 def generate_insights(request):
     try:
+        # Load prompts first
+        try:
+            summary_prompt = load_prompt('summary_prompt.txt')
+            insights_prompt = load_prompt('insights_prompt.txt')
+        except Exception as e:
+            logger.error(f"Failed to load prompt files: {str(e)}")
+            return JsonResponse({
+                'error': f'Failed to load prompt files: {str(e)}'
+            }, status=500)
+
+        # Parse request data
         data = json.loads(request.body)
         transcription = data.get('transcription')
 
@@ -129,25 +132,67 @@ def generate_insights(request):
         # Initialize OpenAI client
         client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
-        # Generate insights directly from transcription
-        insights = ask_chatgpt(client, f"""
-            Analyze the following conversation and provide key insights and a brief summary:
-            
-            {transcription}
-            
-            Please format your response in a clear, concise manner.
+        # Generate summary
+        try:
+            summary = ask_chatgpt(client, f"""
+                {summary_prompt}
+                
+                Conversation:
+                {transcription}
             """)
 
-        return JsonResponse({
-            'insights': insights
-        })
+            insights = ask_chatgpt(client, f"""
+                {insights_prompt}
+                
+                Conversation:
+                {transcription}
+            """)
 
-    except json.JSONDecodeError:
+            logger.debug(f"Summary generated: {summary[:100]}...")
+            logger.debug(f"Insights generated: {insights[:100]}...")
+
+            return JsonResponse({
+                'summary': summary,
+                'insights': insights
+            })
+
+        except Exception as e:
+            logger.error(f"OpenAI API Error: {str(e)}")
+            return JsonResponse({
+                'error': f'OpenAI API Error: {str(e)}'
+            }, status=500)
+
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON Decode Error: {str(e)}")
         return JsonResponse({
             'error': 'Invalid JSON data'
         }, status=400)
     except Exception as e:
-        logger.exception('Error generating insights')
+        logger.error(f"General Error: {str(e)}")
         return JsonResponse({
             'error': str(e)
+        }, status=500)
+
+
+@require_http_methods(["POST"])
+@ensure_csrf_cookie
+def reset_conversation(request):
+    try:
+        # Clear any stored conversation history
+        request.session['conversation_history'] = []
+        
+        # If you're using a database to store conversation history
+        # Add code here to clear relevant database entries
+        
+        # If you're storing any temporary files
+        # Add code here to delete them
+
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Conversation reset successfully'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
         }, status=500)
