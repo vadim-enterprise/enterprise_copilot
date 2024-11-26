@@ -33,6 +33,8 @@ body {
     background: var(--gs-light-gray);
     min-height: 100vh;
     box-shadow: var(--gs-shadow);
+    display: flex;
+    flex-direction: column;
 }
 
 /* Header Styles */
@@ -60,69 +62,68 @@ body {
     padding: 10px;
 }
 
+.transcription-header,
+.email-header {
+    color: var(--gs-dark-navy);
+    font-size: 1.2em;
+    font-weight: 600;
+    margin: 0;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--gs-gold);
+    letter-spacing: -0.3px;
+}
+
 /* Main Content Layout */
 .main-content {
     display: flex;
     gap: 30px;
-    margin-bottom: 30px;
-    height: calc(100vh - 300px);
+    height: calc(100vh - 300px); /* Taller content area */
     min-height: 600px;
+    margin: 20px 0 30px 0;
 }
 
 .left-column {
-    width: 40%; /* Changed from flex to explicit width */
-    height: 100%; /* Ensure full height */
+    width: 40%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
 .right-column {
-    width: 60%; /* Changed from flex to explicit width */
-    height: 100%; /* Ensure full height */
+    width: 60%;
+    height: 100%;
     display: flex;
     flex-direction: column;
     gap: 20px;
 }
 
 /* Section Styles */
-.customer-info-section {
-    background: var(--gs-white);
-    padding: 25px;
-    border-radius: 12px;
-    box-shadow: var(--gs-card-shadow);
-    border: 1px solid var(--gs-border);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    height: 100%; /* Take full height of left column */
-    display: flex;
-    flex-direction: column;
-}
-
+.customer-info-section,
 .summary-section,
 .insights-section {
     background: var(--gs-white);
     padding: 25px;
     border-radius: 12px;
-    box-shadow: var(--gs-card-shadow);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
     border: 1px solid var(--gs-border);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    height: calc(50% - 10px); /* Each takes half of right column minus gap */
     display: flex;
     flex-direction: column;
+    transition: all 0.3s ease;
+    position: relative; /* Added for proper containment */
+    overflow: hidden; /* Prevent box expansion */
 }
 
-.transcription-container {
-    background: var(--gs-white);
-    padding: 25px;
-    border-radius: 12px;
-    box-shadow: var(--gs-card-shadow);
-    border: 1px solid var(--gs-border);
-    margin-top: 30px;
+.customer-info-section {
+    height: 100%;
 }
 
-.customer-info-section:hover,
-.summary-section:hover,
-.insights-section:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+.summary-section,
+.insights-section {
+    height: calc(50% - 35px); /* Fixed height */
+    min-height: 200px; /* Minimum height */
+    max-height: calc(50% - 35px); /* Prevent expansion */
 }
+
 
 /* Heading Styles */
 h2, h3 {
@@ -133,9 +134,17 @@ h2, h3 {
 }
 
 h3 {
-    border-bottom: 2px solid var(--gs-gold);
+    color: var(--gs-dark-navy);
+    font-size: 1.2em;
+    font-weight: 600;
+    margin: 0 0 15px 0;
     padding-bottom: 12px;
-    margin-bottom: 20px;
+    border-bottom: 2px solid var(--gs-gold);
+    letter-spacing: -0.3px;
+    background: var(--gs-white);
+    position: sticky;
+    top: 0;
+    z-index: 1;
 }
 
 /* Output Boxes */
@@ -149,9 +158,11 @@ h3 {
     border-radius: 8px;
     font-size: 15px;
     line-height: 1.7;
-    transition: background-color 0.3s ease;
-    height: calc(100% - 60px); /* Account for header and padding */
-    margin-top: 10px;
+    margin-top: 15px;
+    height: calc(100% - 80px); /* Account for header and padding */
+    min-height: 0; /* Allow box to shrink */
+    scrollbar-width: thin;
+    scrollbar-color: var(--gs-gray) var(--gs-light-gray);
 }
 
 /* Transcription Container */
@@ -159,15 +170,18 @@ h3 {
     background: var(--gs-white);
     padding: 25px;
     border-radius: 12px;
-    box-shadow: var(--gs-card-shadow);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
     border: 1px solid var(--gs-border);
-    margin-top: 20px;
-    width: 100%;
+    margin-top: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
 
-#transcription-output {
-    min-height: 100px;
-    max-height: 150px;
+/* Common styles for both outputs */
+#transcription-output,
+#email-output {
+    flex: 1;
     overflow-y: auto;
     padding: 20px;
     background-color: var(--gs-light-gray);
@@ -175,14 +189,24 @@ h3 {
     border-radius: 8px;
     font-size: 15px;
     line-height: 1.7;
-    transition: background-color 0.3s ease;
-    width: calc(100% - 40px); /* Account for padding */
+    margin-top: 10px;
+    width: calc(100% - 40px);
+    min-height: 150px; /* Fixed height for each section */
+}
+
+/* Hover Effects */
+.customer-info-section:hover,
+.summary-section:hover,
+.insights-section:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 25px rgba(0, 0, 0, 0.1);
 }
 
 .output-box:hover,
 #transcription-output:hover,
 .customer-info-box:hover {
     background-color: var(--gs-light-blue);
+    transition: background-color 0.3s ease;
 }
 
 /* Button Styles */
@@ -255,23 +279,21 @@ button:disabled {
 }
 
 /* Modern Scrollbar */
-::-webkit-scrollbar {
-    width: 10px;
+.output-box::-webkit-scrollbar,
+.customer-info-box::-webkit-scrollbar {
+    width: 8px;
 }
 
-::-webkit-scrollbar-track {
-    background: var(--gs-light-gray);
-    border-radius: 8px;
+.output-box::-webkit-scrollbar-thumb,
+.customer-info-box::-webkit-scrollbar-thumb {
+    background-color: var(--gs-gray);
+    border-radius: 4px;
 }
 
-::-webkit-scrollbar-thumb {
-    background: linear-gradient(var(--gs-gray), var(--gs-navy));
-    border-radius: 8px;
-    border: 2px solid var(--gs-light-gray);
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(var(--gs-navy), var(--gs-dark-navy));
+.output-box::-webkit-scrollbar-track,
+.customer-info-box::-webkit-scrollbar-track {
+    background-color: var(--gs-light-gray);
+    border-radius: 4px;
 }
 
 /* Animations */
@@ -291,27 +313,21 @@ button:disabled {
     .main-content {
         flex-direction: column;
         height: auto;
-        gap: 30px;
+        min-height: 0;
     }
 
     .left-column,
     .right-column {
-        flex: 0 0 100%;
+        width: 100%;
     }
 
-    .customer-info-section,
-    .summary-section,
-    .insights-section {
+    .customer-info-section {
         height: 400px;
     }
 
-    .output-box,
-    .customer-info-box {
-        height: calc(100% - 80px);
-    }
-
-    .container {
-        padding: 15px;
+    .summary-section,
+    .insights-section {
+        height: 200px;
     }
 }
 
@@ -328,6 +344,22 @@ button:disabled {
     button {
         width: 100%;
         max-width: 300px;
+    }
+
+    .email-container {
+        height: auto;
+        min-height: 200px;
+    }
+
+    .email-controls {
+        flex-direction: column;
+    }
+
+    .email-button {
+        width: 100%;
+}
+    .transcription-container {
+        height: auto;
     }
 }
 
@@ -349,4 +381,250 @@ button:disabled {
         border: 1px solid var(--gs-border);
         break-inside: avoid;
     }
+}
+
+/* Content Styling */
+.new-content {
+    color: var(--gs-dark-navy);
+    font-weight: 600;
+    display: block;
+    padding: 10px;
+    background-color: var(--gs-light-blue);
+    border-radius: 6px;
+    margin-bottom: 10px;
+    border-left: 3px solid var(--gs-blue);
+}
+
+.old-content {
+    color: var(--gs-gray);
+    font-weight: normal;
+    display: block;
+    padding: 10px;
+    background-color: var(--gs-light-gray);
+    border-radius: 6px;
+    border-left: 3px solid var(--gs-border);
+}
+
+/* Fade in animation for new content */
+@keyframes fadeInNew {
+    from { 
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to { 
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.new-content {
+    animation: fadeInNew 0.3s ease-out forwards;
+}
+
+/* Ensure proper spacing in output boxes */
+.output-box {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Improve scrollbar visibility for content sections */
+.output-box::-webkit-scrollbar {
+    width: 8px;
+}
+
+.output-box::-webkit-scrollbar-thumb {
+    background-color: var(--gs-gray);
+    border-radius: 4px;
+}
+
+.output-box::-webkit-scrollbar-track {
+    background-color: var(--gs-light-gray);
+    border-radius: 4px;
+}
+
+
+/* Content Items Styling */
+.content-item {
+    padding: 15px;
+    margin-bottom: 12px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    word-wrap: break-word;
+    border-left: 3px solid transparent;
+}
+
+.content-item.newest {
+    background-color: var(--gs-light-blue);
+    border-left-color: var(--gs-blue);
+    font-weight: 600;
+}
+
+.content-item.recent {
+    background-color: var(--gs-light-gray);
+    border-left-color: var(--gs-navy);
+    opacity: 0.95;
+}
+
+.content-item.old {
+    background-color: var(--gs-light-gray);
+    border-left-color: var(--gs-border);
+    opacity: 0.8;
+}
+
+@keyframes fadeInNew {
+    from { 
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to { 
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Output box styling */
+.output-box {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 15px;
+    height: calc(100% - 30px);
+    overflow-y: auto;
+}
+
+/* Email Container Styles */
+.email-container {
+    background: var(--gs-white);
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--gs-border);
+    margin-top: 30px;
+    height: 200px;
+    position: relative;
+}
+
+/* Email Output Styles */
+#email-output {
+    height: calc(100% - 60px);
+    overflow-y: auto;
+    padding: 20px;
+    background-color: var(--gs-light-gray);
+    border: 1px solid var(--gs-border);
+    border-radius: 8px;
+    font-size: 15px;
+    line-height: 1.7;
+    margin-top: 10px;
+    width: calc(100% - 40px);
+}
+
+/* Email Content Styling */
+.email-content {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.email-field {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.email-label {
+    font-weight: 600;
+    color: var(--gs-navy);
+    min-width: 70px;
+}
+
+.email-value {
+    color: var(--gs-dark-navy);
+}
+
+.email-body {
+    padding: 15px;
+    background-color: var(--gs-white);
+    border-radius: 6px;
+    border: 1px solid var(--gs-border);
+    margin-top: 10px;
+}
+
+/* Email Generation Status */
+.generating-email {
+    color: var(--gs-gray);
+    font-style: italic;
+    padding: 15px;
+    background: var(--gs-light-blue);
+    border-radius: 6px;
+    text-align: center;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+}
+
+/* Email Update Animation */
+.email-update {
+    animation: slideIn 0.3s ease-out forwards;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Email Controls */
+.email-controls {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+    justify-content: flex-end;
+}
+
+.email-button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+}
+
+.send-email {
+    background: var(--gs-gradient);
+    color: var(--gs-white);
+}
+
+.edit-email {
+    background: var(--gs-light-blue);
+    color: var(--gs-navy);
+    border: 1px solid var(--gs-blue);
+}
+
+/* Hover states */
+.email-container:hover {
+    box-shadow: 0 6px 25px rgba(0, 0, 0, 0.1);
+}
+
+#email-output:hover {
+    background-color: var(--gs-light-blue);
+    transition: background-color 0.3s ease;
+}
+
+.email-button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }

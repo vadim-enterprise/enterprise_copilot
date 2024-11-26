@@ -15,6 +15,14 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 import json
 from django.template.loader import get_template
 from django.views.decorators.cache import never_cache
+from azure.identity import ClientSecretCredential
+from django.conf import settings
+from django.http import JsonResponse
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django.views.decorators.http import require_http_methods
+import json
+import logging
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -111,18 +119,20 @@ def ask_chatgpt(client, prompt):
 def generate_insights(request):
     try:
         # Load prompts first
-        try:
-            summary_prompt = load_prompt('summary_prompt.txt')
-            insights_prompt = load_prompt('insights_prompt.txt')
-        except Exception as e:
-            logger.error(f"Failed to load prompt files: {str(e)}")
-            return JsonResponse({
-                'error': f'Failed to load prompt files: {str(e)}'
-            }, status=500)
+        summary_prompt = load_prompt('summary_prompt.txt')
+        insights_prompt = load_prompt('insights_prompt.txt')
+    except Exception as e:
+        logger.error(f"Failed to load prompt files: {str(e)}")
+        return JsonResponse({
+            'error': f'Failed to load prompt files: {str(e)}'
+        }, status=500)
 
-        # Parse request data
+    # Parse request data
+    try:
         data = json.loads(request.body)
-        transcription = data.get('transcription')
+        transcription = data.get('transcription', '')
+        
+        logger.info(f"Generating insights for transcription of length {len(transcription)}")
 
         if not transcription:
             return JsonResponse({
@@ -133,66 +143,156 @@ def generate_insights(request):
         client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
         # Generate summary
-        try:
-            summary = ask_chatgpt(client, f"""
-                {summary_prompt}
-                
-                Conversation:
-                {transcription}
-            """)
+        summary = ask_chatgpt(client, f"""
+            {summary_prompt}
+            
+            Conversation:
+            {transcription}
+        """)
 
-            insights = ask_chatgpt(client, f"""
-                {insights_prompt}
-                
-                Conversation:
-                {transcription}
-            """)
+        # Generate insights
+        insights = ask_chatgpt(client, f"""
+            {insights_prompt}
+            
+            Conversation:
+            {transcription}
+        """)
 
-            logger.debug(f"Summary generated: {summary[:100]}...")
-            logger.debug(f"Insights generated: {insights[:100]}...")
+        logger.debug(f"Summary generated: {summary[:100]}...")
+        logger.debug(f"Insights generated: {insights[:100]}...")
 
-            return JsonResponse({
-                'summary': summary,
-                'insights': insights
-            })
-
-        except Exception as e:
-            logger.error(f"OpenAI API Error: {str(e)}")
-            return JsonResponse({
-                'error': f'OpenAI API Error: {str(e)}'
-            }, status=500)
+        return JsonResponse({
+            'summary': summary,
+            'insights': insights
+        })
 
     except json.JSONDecodeError as e:
-        logger.error(f"JSON Decode Error: {str(e)}")
+        logger.error(f"JSON decode error: {str(e)}")
         return JsonResponse({
-            'error': 'Invalid JSON data'
+            'error': f'Invalid JSON format: {str(e)}'
         }, status=400)
     except Exception as e:
-        logger.error(f"General Error: {str(e)}")
+        logger.error(f"Error generating insights: {str(e)}")
         return JsonResponse({
-            'error': str(e)
+            'error': f'Error generating insights: {str(e)}'
         }, status=500)
-
 
 @require_http_methods(["POST"])
 @ensure_csrf_cookie
 def reset_conversation(request):
     try:
-        # Clear any stored conversation history
-        request.session['conversation_history'] = []
+        # Clear any session data if needed
+        if 'conversation_history' in request.session:
+            del request.session['conversation_history']
         
-        # If you're using a database to store conversation history
-        # Add code here to clear relevant database entries
-        
-        # If you're storing any temporary files
-        # Add code here to delete them
-
         return JsonResponse({
             'status': 'success',
             'message': 'Conversation reset successfully'
         })
     except Exception as e:
+        logger.error(f"Error in reset_conversation: {str(e)}")
         return JsonResponse({
             'status': 'error',
             'message': str(e)
+        }, status=500)
+
+logger = logging.getLogger(__name__)
+
+@require_http_methods(["POST"])
+@ensure_csrf_cookie
+def generate_and_send_email(request):
+    try:
+        data = json.loads(request.body)
+        transcription = data.get('transcription', '')
+        
+        if not transcription:
+            return JsonResponse({
+                'error': 'Missing transcription'
+            }, status=400)
+
+        # Initialize OpenAI client for content generation
+        openai_client = OpenAI(api_key=settings.OPENAI_API_KEY)
+
+        # Generate email content using GPT
+        email_prompt = load_prompt('email_prompt.txt')
+        response = ask_chatgpt(openai_client, f"""
+            {email_prompt}
+            
+            Conversation:
+            {transcription}
+            
+            Please generate a professional email based on this conversation.
+            Format the response as JSON with "to", "subject", and "body" fields.
+        """)
+
+        try:
+            # Parse the email content
+            email_data = json.loads(response)
+            
+            # Initialize Microsoft Graph client
+            credentials = ClientSecretCredential(
+                tenant_id=settings.MS_TENANT_ID,
+                client_id=settings.MS_CLIENT_ID,
+                client_secret=settings.MS_CLIENT_SECRET
+            )
+            
+            graph_client = GraphClient(credential=credentials)
+
+            # Prepare email message
+            message = {
+                "message": {
+                    "subject": email_data.get('subject', 'Meeting Follow-up'),
+                    "body": {
+                        "contentType": "HTML",
+                        "content": email_data.get('body', '')
+                    },
+                    "toRecipients": [
+                        {
+                            "emailAddress": {
+                                "address": email_data.get('to', '')
+                            }
+                        }
+                    ]
+                },
+                "saveToSentItems": "true"
+            }
+
+            # Send draft email
+            result = graph_client.post(
+                '/me/messages',
+                data=message,
+                headers={'Content-Type': 'application/json'}
+            )
+
+            if result.status_code == 201:
+                response_data = result.json()
+                return JsonResponse({
+                    'status': 'success',
+                    'message': 'Email draft created successfully',
+                    'email_data': {
+                        'to': email_data.get('to', ''),
+                        'subject': email_data.get('subject', ''),
+                        'body': email_data.get('body', ''),
+                        'message_id': response_data.get('id')
+                    }
+                })
+            else:
+                raise Exception(f"Failed to create draft: {result.text}")
+
+        except json.JSONDecodeError:
+            logger.error("Failed to parse GPT response as JSON")
+            return JsonResponse({
+                'error': 'Failed to generate proper email format'
+            }, status=500)
+            
+        except Exception as e:
+            logger.error(f"Error in Microsoft Graph API: {str(e)}")
+            return JsonResponse({
+                'error': f'Failed to create email draft: {str(e)}'
+            }, status=500)
+
+    except Exception as e:
+        logger.error(f"Error generating email: {str(e)}")
+        return JsonResponse({
+            'error': f'Error generating email: {str(e)}'
         }, status=500)

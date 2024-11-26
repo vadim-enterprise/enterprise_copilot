@@ -4,11 +4,20 @@ let isRecording = false;
 let socket;
 let mediaRecorder;
 let wsRetryCount = 0;
-const MAX_RETRIES = 3;
 let transcriptionBuffer = '';
 let lastUpdateTime = Date.now();
-const UPDATE_INTERVAL = 100; // Update every 100ms
 let finalTranscript = '';
+let chunkCount = 0;
+
+const CONFIG = {
+    MAX_RETRIES: 3,
+    CHUNKS_BEFORE_INSIGHTS: 1,  // Number of audio chunks before generating insights
+    MIN_TRANSCRIPT_LENGTH: 10,   // Minimum characters before generating insights
+    UPDATE_INTERVAL: 100,        // Update interval for transcription display (ms)
+    DEBOUNCE_DELAY: 0,        // Delay before generating insights (ms)
+    MAX_CONTENT_LENGTH: 120,
+    EMAIL_UPDATE_INTERVAL: 3, 
+};
 
 // DOM Elements
 const elements = {
@@ -17,7 +26,8 @@ const elements = {
     transcriptionOutput: document.getElementById('transcription-output'),
     summaryOutput: document.getElementById('summary-output'),
     insightsOutput: document.getElementById('insights-output'),
-    resetButton: document.getElementById('reset-conversation')
+    resetButton: document.getElementById('reset-conversation'),
+    emailOutput: document.getElementById('email-output'),
 };
 
 try {
@@ -56,75 +66,83 @@ try {
                 return null;
             }
         
-            try {
-                recognition = new webkitSpeechRecognition();
-                recognition.continuous = true;
-                recognition.interimResults = true;
-                recognition.lang = 'en-US';
-        
-                recognition.onstart = () => {
-                    console.log('Speech recognition started');
-                    isRecording = true;
-                    elements.startButton.disabled = true;
-                    elements.stopButton.disabled = false;
-                };
-        
-                recognition.onresult = (event) => {
-                    if (elements.transcriptionOutput.innerHTML === 'Listening...') {
-                        elements.transcriptionOutput.innerHTML = '';
-                    }
-                
-                    let interimTranscript = '';
-                    let currentFinalTranscript = '';
-                
-                    for (let i = 0; i < event.results.length; i++) {
-                        const result = event.results[i];
-                        if (result.isFinal) {
-                            currentFinalTranscript += result[0].transcript + ' ';
-                            console.log('Final transcript:', result[0].transcript);
-                        } else {
-                            interimTranscript += result[0].transcript;
-                            console.log('Interim transcript:', result[0].transcript);
-                        }
-                    }
-                
-                    if (currentFinalTranscript) {
-                        finalTranscript = currentFinalTranscript;
-                    }
-                
-                    elements.transcriptionOutput.innerHTML = 
-                        finalTranscript + 
-                        '<span style="color: #666;">' + interimTranscript + '</span>';
-                
-                    // Generate real-time insights when we have final transcript
-                    if (currentFinalTranscript) {
-                        generateRealTimeInsights(finalTranscript);
-                    }
-                
-                    elements.transcriptionOutput.scrollTop = elements.transcriptionOutput.scrollHeight;
-                };
-                
-                recognition.onend = () => {
-                    console.log('Speech recognition ended');
-                    if (isRecording) {
-                        console.log('Restarting recognition');
-                        try {
-                            recognition.start();
-                        } catch (error) {
-                            console.error('Error restarting recognition:', error);
-                        }
+            // try {
+            recognition = new webkitSpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'en-US';
+    
+            recognition.onstart = () => {
+                console.log('Speech recognition started');
+                isRecording = true;
+                elements.startButton.disabled = true;
+                elements.stopButton.disabled = false;
+                chunkCount = 0;
+            };
+    
+            recognition.onresult = (event) => {
+                if (elements.transcriptionOutput.innerHTML === 'Listening...') {
+                    elements.transcriptionOutput.innerHTML = '';
+                }
+            
+                let interimTranscript = '';
+                let currentFinalTranscript = '';
+            
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const result = event.results[i];
+                    if (result.isFinal) {
+                        currentFinalTranscript += result[0].transcript + ' ';
+                        console.log('Final transcript:', result[0].transcript);
+                        chunkCount++;  // Increment chunk counter
+                        console.log(`Chunk count: ${chunkCount}/${CONFIG.CHUNKS_BEFORE_INSIGHTS}`);
                     } else {
-                        elements.startButton.disabled = false;
-                        elements.stopButton.disabled = true;
+                        interimTranscript += result[0].transcript;
+                        console.log('Interim transcript:', result[0].transcript);
                     }
-                };
-        
-                return recognition;
-            } catch (error) {
-                console.error('Error initializing speech recognition:', error);
-                elements.transcriptionOutput.textContent = 'Error initializing speech recognition';
-                return null;
-            }
+                }
+            
+                if (currentFinalTranscript) {
+                    finalTranscript += currentFinalTranscript;
+                }
+            
+                elements.transcriptionOutput.innerHTML = 
+                    finalTranscript + 
+                    '<span style="color: #666;">' + interimTranscript + '</span>';
+            
+                // Generate insights based on chunk count and minimum length
+                if (chunkCount >= CONFIG.CHUNKS_BEFORE_INSIGHTS && 
+                    finalTranscript.length >= CONFIG.MIN_TRANSCRIPT_LENGTH) {
+                    console.log('Generating email update...'); // Debug log
+                    generateRealTimeInsights(finalTranscript);
+
+                    // Generate email every EMAIL_UPDATE_INTERVAL chunks
+                    if (chunkCount % CONFIG.EMAIL_UPDATE_INTERVAL === 0) {
+                        generateEmail(finalTranscript);
+                    }
+
+                    chunkCount = 0;  // Reset counter after generating insights
+                }
+            
+                elements.transcriptionOutput.scrollTop = elements.transcriptionOutput.scrollHeight;
+            };
+            
+            recognition.onend = () => {
+                console.log('Speech recognition ended');
+                if (isRecording) {
+                    console.log('Restarting recognition');
+                    recognition.start();
+                } else {
+                    elements.startButton.disabled = false;
+                    elements.stopButton.disabled = true;
+                }
+            };
+    
+            return recognition;
+            // } catch (error) {
+            //     console.error('Error initializing speech recognition:', error);
+            //     elements.transcriptionOutput.textContent = 'Error initializing speech recognition';
+            //     return null;
+            // }
         }
 
         function updateTranscriptionDisplay() {
@@ -143,7 +161,7 @@ try {
         }
         
         function setupWebSocket() {
-            if (wsRetryCount >= MAX_RETRIES) {
+            if (wsRetryCount >= CONFIG.MAX_RETRIES) {
                 console.error('Max WebSocket connection retries reached');
                 elements.transcriptionOutput.textContent = 'Unable to establish connection. Please refresh the page.';
                 return null;
@@ -194,7 +212,7 @@ try {
                     console.log('WebSocket connection closed');
                     if (isRecording) {
                         wsRetryCount++;
-                        console.log(`Retrying WebSocket connection (${wsRetryCount}/${MAX_RETRIES})`);
+                        console.log(`Retrying WebSocket connection (${wsRetryCount}/${CONFIG.MAX_RETRIES})`);
                         setupWebSocket();
                     }
                 };
@@ -266,43 +284,57 @@ try {
                 return;
             }
         
-            elements.summaryOutput.innerHTML = '';
-            elements.insightsOutput.innerHTML = '';
+            // Reset counters and transcripts
+            chunkCount = 0;
+            finalTranscript = '';
+            transcriptionBuffer = '';
+        
+            // Reset UI
+            elements.summaryOutput.innerHTML = 'Waiting for conversation...';
+            elements.insightsOutput.innerHTML = 'Waiting for conversation...';
             elements.transcriptionOutput.innerHTML = 'Waiting to start...';
+            elements.emailOutput.innerHTML = 'Waiting for conversation...';
         
             if (elements.stopButton && !elements.stopButton.disabled) {
                 elements.stopButton.click();
             }
+
+            if (isRecording) {
+                stopRecording();
+            }
             
             elements.startButton.disabled = false;
             elements.stopButton.disabled = true;
-            
-            finalTranscript = '';
-            transcriptionBuffer = '';
         
-            fetch('/reset_conversation/', {
+            // Call backend to reset conversation
+            fetch('/reset-conversation/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': getCSRFToken(),
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
                 },
+                credentials: 'include'
             })
             .then(response => {
                 if (!response.ok) {
-                    throw new Error('Failed to reset conversation history');
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                console.log('Conversation history reset successfully');
+                return response.json();
+            })
+            .then(data => {
+                console.log('Conversation reset successfully:', data);
             })
             .catch(error => {
                 console.error('Error resetting conversation:', error);
-                alert('Error resetting conversation. Please try again.');
             });
         }
 
         function startTranscriptionUpdates() {
             function update() {
                 const now = Date.now();
-                if (now - lastUpdateTime >= UPDATE_INTERVAL) {
+                if (now - lastUpdateTime >= CONFIG.UPDATE_INTERVAL) {
                     updateTranscriptionDisplay();
                     lastUpdateTime = now;
                 }
@@ -324,9 +356,60 @@ try {
                 timeout = setTimeout(later, wait);
             };
         }
+
+        function updateContentBox(element, newContent, contentType) {
+            // Get existing content
+            const existingContent = element.innerHTML;
+            
+            // Skip if it's the initial waiting message
+            if (existingContent === `Waiting for conversation...` || 
+                existingContent === `Generating ${contentType.toLowerCase()}...`) {
+                element.innerHTML = `<div class="content-item newest">${newContent}</div>`;
+                return;
+            }
+        
+            // Create new content element
+            const newContentHtml = `<div class="content-item newest">${newContent}</div>`;
+            
+            // Update existing content classes (shift opacity)
+            const updatedExisting = existingContent
+                .replace(/newest/g, 'recent')
+                .replace(/recent/g, 'old');
+            
+            // Combine new and existing content
+            let combinedContent = newContentHtml + updatedExisting;
+            
+            // Get all content items
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = combinedContent;
+            const contentItems = Array.from(tempDiv.getElementsByClassName('content-item'));
+            
+            // Trim content if it exceeds max length
+            let totalLength = 0;
+            let trimmedContent = '';
+            
+            for (let item of contentItems) {
+                const itemLength = item.textContent.length;
+                if (totalLength + itemLength <= CONFIG.MAX_CONTENT_LENGTH) {
+                    trimmedContent += item.outerHTML;
+                    totalLength += itemLength;
+                } else {
+                    // If this is the first item and it's already too long, trim it
+                    if (totalLength === 0) {
+                        item.textContent = item.textContent.substring(0, CONFIG.MAX_CONTENT_LENGTH);
+                        trimmedContent = item.outerHTML;
+                    }
+                    break;
+                }
+            }
+            
+            // Update the element
+            element.innerHTML = trimmedContent;
+        }
         
         const generateRealTimeInsights = debounce((transcription) => {
             if (!transcription || 
+                transcription.length < CONFIG.MIN_TRANSCRIPT_LENGTH || 
                 transcription === 'Waiting to start...' || 
                 transcription === 'Listening...' ||
                 transcription === 'Connected to transcription service...') {
@@ -343,8 +426,15 @@ try {
                 elements.insightsOutput.innerHTML = 'Error: CSRF token not found. Please refresh the page.';
                 return;
             }
+
+            // Log the request details for debugging
+            console.log('Sending request to generate insights:', {
+                url: '/generate-insights/',
+                transcription: transcription.substring(0, 100) + '...',
+                chunkSize: CONFIG.CHUNKS_BEFORE_INSIGHTS
+            });            
         
-            fetch('/generate_insights/', {
+            fetch('/generate-insights/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -353,7 +443,8 @@ try {
                     'X-Requested-With': 'XMLHttpRequest'
                 },
                 body: JSON.stringify({
-                    transcription: transcription
+                    transcription: transcription,
+                    chunkSize: CONFIG.CHUNKS_BEFORE_INSIGHTS  // Send chunk size to backend
                 }),
                 credentials: 'include'
             })
@@ -376,18 +467,27 @@ try {
                     throw new Error(data.error);
                 }
         
+                // if (typeof data.summary === 'string') {
+                //     elements.summaryOutput.innerHTML = data.summary;
+                // } else {
+                //     elements.summaryOutput.innerHTML = 'No summary available';
+                // }
+                
+                // if (typeof data.insights === 'string') {
+                //     elements.insightsOutput.innerHTML = data.insights;
+                // } else {
+                //     elements.insightsOutput.innerHTML = 'No insights available';
+                // }
+                // Update summary with new text in bold
                 if (typeof data.summary === 'string') {
-                    elements.summaryOutput.innerHTML = data.summary;
-                } else {
-                    elements.summaryOutput.innerHTML = 'No summary available';
+                    updateContentBox(elements.summaryOutput, data.summary, 'Summary');
                 }
                 
+                // Update insights with new text
                 if (typeof data.insights === 'string') {
-                    elements.insightsOutput.innerHTML = data.insights;
-                } else {
-                    elements.insightsOutput.innerHTML = 'No insights available';
+                    updateContentBox(elements.insightsOutput, data.insights, 'Insights');
                 }
-        
+
                 console.log('Successfully updated UI with insights and summary');
             })
             .catch(error => {
@@ -395,7 +495,7 @@ try {
                 elements.summaryOutput.innerHTML = `Error: ${error.message}`;
                 elements.insightsOutput.innerHTML = `Error: ${error.message}`;
             });
-        }, 2000);
+        }, CONFIG.DEBOUNCE_DELAY);
         
         // Initialize everything
         initializeSpeechRecognition();
@@ -405,6 +505,66 @@ try {
         elements.stopButton.addEventListener('click', stopRecording);
         elements.resetButton.addEventListener('click', resetConversation);
     });
+
+    function generateEmail(transcription) {
+        console.log('generateEmail called with transcription length:', transcription.length); // Debug log
+        
+        if (!transcription || 
+            transcription.length < CONFIG.MIN_TRANSCRIPT_LENGTH || 
+            transcription === 'Waiting to start...') {
+            console.log('Email generation skipped - invalid transcription'); // Debug log
+            return;
+        }
+    
+        console.log('Generating email...'); // Debug log
+        elements.emailOutput.innerHTML = 'Generating email...';
+        
+        const csrftoken = getCSRFToken();
+        
+        fetch('/generate-email/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken,
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                transcription: transcription
+            }),
+            credentials: 'include'
+        })
+        .then(response => {
+            console.log('Email generation response received'); // Debug log
+            return response.json();
+        })
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+    
+            console.log('Email data received:', data); // Debug log
+    
+            const emailContent = `
+                <div class="email-field">
+                    <span class="email-label">To:</span>
+                    <span class="email-value">${data.email_data.to}</span>
+                </div>
+                <div class="email-field">
+                    <span class="email-label">Subject:</span>
+                    <span class="email-value">${data.email_data.subject}</span>
+                </div>
+                <div class="email-body">${data.email_data.body}</div>
+            `;
+    
+            updateContentBox(elements.emailOutput, emailContent, 'Email');
+            console.log('Email content updated'); // Debug log
+        })
+        .catch(error => {
+            console.error('Error generating email:', error);
+            elements.emailOutput.innerHTML = `Error: ${error.message}`;
+        });
+    }
 } catch (error) {
     console.error('Critical error during setup:', error);
 }
