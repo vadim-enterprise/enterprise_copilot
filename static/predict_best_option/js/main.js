@@ -496,6 +496,66 @@ try {
                 elements.insightsOutput.innerHTML = `Error: ${error.message}`;
             });
         }, CONFIG.DEBOUNCE_DELAY);
+
+        function generateEmail(transcription) {
+            console.log('generateEmail called with transcription length:', transcription.length); // Debug log
+            
+            if (!transcription || 
+                transcription.length < CONFIG.MIN_TRANSCRIPT_LENGTH || 
+                transcription === 'Waiting to start...') {
+                console.log('Email generation skipped - invalid transcription'); // Debug log
+                return;
+            }
+        
+            console.log('Generating email...'); // Debug log
+            elements.emailOutput.innerHTML = 'Generating email...';
+            
+            const csrftoken = getCSRFToken();
+            
+            fetch('/generate-email/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken,
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    transcription: transcription
+                }),
+                credentials: 'include'
+            })
+            .then(response => {
+                console.log('Email generation response received'); // Debug log
+                return response.json();
+            })
+            .then(data => {
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+        
+                console.log('Email data received:', data); // Debug log
+        
+                const emailContent = `
+                    <div class="email-field">
+                        <span class="email-label">To:</span>
+                        <span class="email-value">${data.email_data.to}</span>
+                    </div>
+                    <div class="email-field">
+                        <span class="email-label">Subject:</span>
+                        <span class="email-value">${data.email_data.subject}</span>
+                    </div>
+                    <div class="email-body">${data.email_data.body}</div>
+                `;
+        
+                updateContentBox(elements.emailOutput, emailContent, 'Email');
+                console.log('Email content updated'); // Debug log
+            })
+            .catch(error => {
+                console.error('Error generating email:', error);
+                elements.emailOutput.innerHTML = `Error: ${error.message}`;
+            });
+        }
         
         // Initialize everything
         initializeSpeechRecognition();
@@ -506,65 +566,6 @@ try {
         elements.resetButton.addEventListener('click', resetConversation);
     });
 
-    function generateEmail(transcription) {
-        console.log('generateEmail called with transcription length:', transcription.length); // Debug log
-        
-        if (!transcription || 
-            transcription.length < CONFIG.MIN_TRANSCRIPT_LENGTH || 
-            transcription === 'Waiting to start...') {
-            console.log('Email generation skipped - invalid transcription'); // Debug log
-            return;
-        }
-    
-        console.log('Generating email...'); // Debug log
-        elements.emailOutput.innerHTML = 'Generating email...';
-        
-        const csrftoken = getCSRFToken();
-        
-        fetch('/generate-email/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrftoken,
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: JSON.stringify({
-                transcription: transcription
-            }),
-            credentials: 'include'
-        })
-        .then(response => {
-            console.log('Email generation response received'); // Debug log
-            return response.json();
-        })
-        .then(data => {
-            if (data.error) {
-                throw new Error(data.error);
-            }
-    
-            console.log('Email data received:', data); // Debug log
-    
-            const emailContent = `
-                <div class="email-field">
-                    <span class="email-label">To:</span>
-                    <span class="email-value">${data.email_data.to}</span>
-                </div>
-                <div class="email-field">
-                    <span class="email-label">Subject:</span>
-                    <span class="email-value">${data.email_data.subject}</span>
-                </div>
-                <div class="email-body">${data.email_data.body}</div>
-            `;
-    
-            updateContentBox(elements.emailOutput, emailContent, 'Email');
-            console.log('Email content updated'); // Debug log
-        })
-        .catch(error => {
-            console.error('Error generating email:', error);
-            elements.emailOutput.innerHTML = `Error: ${error.message}`;
-        });
-    }
 } catch (error) {
     console.error('Critical error during setup:', error);
 }
