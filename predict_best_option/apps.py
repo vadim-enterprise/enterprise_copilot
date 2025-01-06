@@ -1,7 +1,7 @@
 import os
 from django.apps import AppConfig
 from django.conf import settings
-import keras
+
 
 class PredictBestOptionConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"

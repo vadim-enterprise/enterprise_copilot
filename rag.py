@@ -34,7 +34,7 @@ chroma_client = chromadb.PersistentClient(path="./chroma_data")
 collection = chroma_client.get_or_create_collection(name="knowledge_base")
 
 # Load and process document
-txt_path = "/home/ubuntu/django_project/text.txt"
+txt_path = "text.txt"
 documents = txt_to_sentences(txt_path)
 
 # Get embeddings from OpenAI

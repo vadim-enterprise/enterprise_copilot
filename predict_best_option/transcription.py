@@ -2,66 +2,59 @@ import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 import speech_recognition as sr
 import asyncio
-import base64
-import numpy as np
-import wave
-import io
-import os
 import logging
-import tempfile
-from pydub import AudioSegment
+from .hybrid_rag import HybridRAG
 
 logger = logging.getLogger(__name__)
 
 class Transcription(AsyncWebsocketConsumer):
     async def connect(self):
-        logger.info("WebSocket connection attempt...")
-        try:
-            await self.accept()
-            logger.info("WebSocket connection accepted!")
-            await self.send(text_data=json.dumps({
-                'status': 'connected',
-                'message': 'WebSocket connection established'
-            }))
-        except Exception as e:
-            logger.error(f"Connection error: {str(e)}")
-            raise
+        self.hybrid_rag = HybridRAG()  # Initialize HybridRAG
+        self.conversation_history = []
+        await self.accept()
+        print("WebSocket connected with HybridRAG support")
 
     async def disconnect(self, close_code):
-        logger.info(f"WebSocket disconnected with code: {close_code}")
+        print(f"WebSocket disconnected with code: {close_code}")
 
     async def receive(self, text_data):
         try:
             text_data_json = json.loads(text_data)
+            transcription = text_data_json.get('message', '')
             
-            if 'audio_data' in text_data_json:
-                audio_data = base64.b64decode(text_data_json['audio_data'])
-                
-                # Process smaller chunks of audio
-                with io.BytesIO() as wav_io:
-                    with wave.open(wav_io, 'wb') as wav_file:
-                        wav_file.setnchannels(1)
-                        wav_file.setsampwidth(2)
-                        wav_file.setframerate(16000)
-                        wav_file.writeframes(audio_data)
-                    
-                    wav_io.seek(0)
-                    transcription = await self.transcribe_audio(wav_io)
-                    
-                    if transcription:
-                        # Send transcription immediately
-                        await self.send(text_data=json.dumps({
-                            'status': 'transcription',
-                            'text': transcription
-                        }))
-                        logger.info(f"Sent transcription: {transcription}")
-                    else:
-                        logger.debug("No speech detected in audio chunk")
-                    
-        except Exception as e:
-            logger.error(f"Error in receive: {str(e)}")
+            # Add transcription to conversation history
+            self.conversation_history.append(transcription)
+            
+            # Use HybridRAG to process the transcription
+            user_context = {
+                "technical_level": "intermediate",
+                "detail_preference": "balanced",
+                "prior_knowledge": "some"
+            }
+            
+            # Process with HybridRAG asynchronously
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(
+                None, 
+                lambda: self.hybrid_rag.query(
+                    question=transcription,
+                    style="conversation",
+                    user_context=user_context
+                )
+            )
+
+            # Send enhanced response back
             await self.send(text_data=json.dumps({
-                'status': 'error',
+                'message': transcription,
+                'enhanced_response': result['answer'],
+                'confidence': result['confidence'],
+                'style_used': result['style_used'],
+                'sources': result.get('sources', [])
+            }))
+
+        except Exception as e:
+            print(f"Error in receive: {str(e)}")
+            await self.send(text_data=json.dumps({
                 'error': str(e)
             }))
 
@@ -97,3 +90,6 @@ class Transcription(AsyncWebsocketConsumer):
                     return None
 
         return await loop.run_in_executor(None, recognize)
+
+    async def send(self, text_data=None, bytes_data=None):
+        # This method is inherited from AsyncWebsocketConsumer

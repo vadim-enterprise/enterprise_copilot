@@ -12,79 +12,91 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Goldman Sachs Advisor Assist</h1>
+            <h1>CEO Copilot</h1>
             <div class="controls">
-                <button id="start-recording">Start Recording</button>
-                <button id="stop-recording" disabled>Stop Recording</button>
-                <button id="reset-conversation" class="reset-button">Reset Conversation</button>
+                <!-- Left group - Knowledge base controls -->
+                <div class="controls-left">
+                    <button id="enrich-knowledge" class="action-button">Enrich</button>
+                    <button id="inspect-knowledge" class="action-button">View</button>
+                    <button id="clear-knowledge" class="danger-button">Clear</button>
+                </div>
+
+                <!-- Right group - Recording controls -->
+                <div class="controls-right">
+                    <button id="start-recording">Start</button>
+                    <button id="stop-recording" disabled>Stop</button>
+                    <button id="reset-conversation" class="reset-button">Reset</button>
+                </div>
             </div>
         </div>
         
         <!-- Main content area with two columns -->
         <div class="main-content">
-            <!-- Left Column - Customer Information -->
-            <div class="left-column">
-                <div class="customer-info-section">
-                    <h3>Client Information</h3>
-                    <div class="customer-info-box">
-                        <p><strong>Customer Name:</strong> John Doe</p>
-                        <p><strong>Account Type:</strong> Premium</p>
-                        <p><strong>Customer Since:</strong> January 2023</p>
-                        <p><strong>Last Contact:</strong> March 15, 2024</p>
-                        <p><strong>Preferred Contact:</strong> Email</p>
-                        <p><strong>Recent Issues:</strong></p>
-                        <ul>
-                            <li>Billing inquiry (Resolved)</li>
-                            <li>Technical support request</li>
-                        </ul>
-                        <p><strong>Notes:</strong></p>
-                        <div class="notes-section">
-                            Customer has expressed interest in upgrading their service package.
-                            Previous interactions have been positive.
-                            Prefers detailed technical explanations.
+            <!-- Left Column - Internet Search and Knowledge Base -->
+            <div class="right-column">
+                <div class="search-section">
+                    <h3>Internet Search</h3>
+                    <div class="rag-search-container">
+                        <input type="text" 
+                               id="rag-search-input" 
+                               placeholder="Search internet..."
+                               aria-label="Search internet">
+                        <button id="rag-search-button" 
+                                class="gs-button">
+                            Search
+                        </button>
+                    </div>
+                    <div class="search-results-container">
+                        <div id="search-results" class="search-results">
+                            <!-- Results will be populated here -->
                         </div>
                     </div>
+                </div>
+                
+                <div id="knowledge-base-content" class="output-box">
+                    <h3>Knowledge Base Content</h3>
+                    <div class="content"></div>
+                    <div class="pagination"></div>
                 </div>
             </div>
 
             <!-- Right Column - Analysis -->
-            <div class="right-column">
+            <div class="middle-column">
                 <div class="analysis-section">
                     <div class="insights-section">
                         <h3>Key Insights & Suggestions</h3>
                         <div id="insights-output" class="output-box"></div>
                     </div>
+                    
+                    <!-- Moved email box before summary -->
+                    <div class="email-box">
+                        <h3>Generated Email</h3>
+                        <div id="email-output" class="output-box">
+                            <div class="email-header">
+                                <div class="email-field">
+                                    <span class="email-label">To:</span>
+                                    <span id="email-to" class="email-value">Waiting for recipient...</span>
+                                </div>
+                                <div class="email-field">
+                                    <span class="email-label">Subject:</span>
+                                    <span id="email-subject" class="email-value">Waiting for subject...</span>
+                                </div>
+                            </div>
+                            <div id="email-body" class="email-content">
+                                Waiting for conversation...
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Moved summary section after email -->
                     <div class="summary-section">
                         <h3>Conversation Summary</h3>
-                        <div id="summary-output" class="output-box"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Transcription Section at the bottom -->
-        <div class="transcription-container">
-            <div class="transcription-box">
-                <h2>Real-Time Transcription</h2>
-                <div id="transcription-output">
-                    Waiting to start...
-                </div>
-            </div>
-            <div class="email-container">
-                <h3>Generated Email</h3>
-                <div id="email-output" class="output-box">
-                    <div class="email-header">
-                        <div class="email-field">
-                            <span class="email-label">To:</span>
-                            <span id="email-to" class="email-value">Waiting for recipient...</span>
+                        <div id="summary-output" class="output-box">
+                            <!-- Summary content will be here -->
                         </div>
-                        <div class="email-field">
-                            <span class="email-label">Subject:</span>
-                            <span id="email-subject" class="email-value">Waiting for subject...</span>
+                        <div class="real-time-transcription">
+                            <div id="transcription-output">Waiting to start...</div>
                         </div>
-                    </div>
-                    <div id="email-body" class="email-content">
-                        Waiting for conversation...
                     </div>
                 </div>
             </div>

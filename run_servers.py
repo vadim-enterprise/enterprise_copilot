@@ -3,12 +3,7 @@ import sys
 import os
 import time
 import logging
-import signal
-import psutil
 import socket
-from threading import Thread, Event
-from typing import List, Tuple, Callable
-from contextlib import closing
 import argparse
 import django
 from django.core.management import execute_from_command_line
@@ -191,12 +186,16 @@ def run_django():
     os.environ['DJANGO_ENV'] = 'development'
     
     # Use subprocess instead of direct execution
-    subprocess.Popen([
-        sys.executable,
-        "manage.py",
-        "runserver",
-        "0.0.0.0:8000"
-    ])
+    try:
+        return subprocess.Popen([
+            sys.executable,
+            "manage.py",
+            "runserver",
+            "0.0.0.0:8000"
+        ])
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Failed to start Django server: {e}")
+        return None
 
 def run_fastapi():
     subprocess.run([
@@ -236,46 +235,100 @@ def deploy() -> bool:
         logger.error(f"Error during deployment: {str(e)}")
         return False
 
+def kill_ports():
+    """Kill processes on both required ports with verification"""
+    def is_port_free(port):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                s.bind(('127.0.0.1', port))
+                s.close()
+                return True
+            except:
+                return False
+
+    for port in REQUIRED_PORTS:
+        if not is_port_free(port):
+            logger.info(f"Port {port} is in use, attempting to kill...")
+            try:
+                if os.name == 'nt':  # Windows
+                    # Get process ID using subprocess instead of temporary file
+                    cmd = f'netstat -ano | findstr :{port} | findstr LISTENING'
+                    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+                    
+                    if result.stdout:
+                        # Extract PID from the last column of netstat output
+                        pid = result.stdout.strip().split()[-1]
+                        subprocess.run(f'taskkill /F /PID {pid}', shell=True)
+                else:  # Unix/Linux/MacOS
+                    subprocess.run(f'lsof -ti:{port} | xargs kill -9', shell=True)
+                
+                time.sleep(2)  # Wait for port to be freed
+                if not is_port_free(port):
+                    logger.error(f"Failed to free port {port}")
+                    return False
+            except Exception as e:
+                logger.error(f"Error killing process on port {port}: {e}")
+                return False
+    return True
+
 def development():
     """Run development servers"""
     try:
+        # Kill existing processes first
+        if not kill_ports():
+            logger.error("Failed to free required ports")
+            sys.exit(1)
+            
         # Set development environment
         os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'django_project.settings')
         os.environ['DJANGO_ENV'] = 'development'
         
-        # Show initial port status
-        logger.info("Initial port status:")
-        for port in REQUIRED_PORTS:
-            logger.info(get_process_details(port))
-
-        if not free_required_ports():
-            logger.error("Failed to free required ports")
-            logger.info("Final port status:")
-            for port in REQUIRED_PORTS:
-                logger.info(get_process_details(port))
-            return
-
-        logger.info("Starting development servers...")
+        # Start Django server with error checking
+        django_process = subprocess.Popen([
+            sys.executable,
+            "manage.py",
+            "runserver",
+            "0.0.0.0:8000"
+        ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         
-        # Ensure static files directory exists
-        static_root = os.path.join(os.getcwd(), 'assets')
-        os.makedirs(static_root, exist_ok=True)
+        # Check if Django server started successfully
+        time.sleep(2)
+        if django_process.poll() is not None:
+            _, error = django_process.communicate()
+            logger.error(f"Django server failed to start: {error.decode()}")
+            sys.exit(1)
+            
+        logger.info("Django server started successfully")
         
-        # Start servers using subprocess
-        django_process = run_django()
-        fastapi_process = run_fastapi()
+        # Continue with FastAPI server...
+        
+        # Start FastAPI server
+        fastapi_process = subprocess.Popen([
+            "uvicorn",
+            "predict_best_option.fastapi_app.main:app",
+            "--host", "127.0.0.1",
+            "--port", "8001",
+            "--reload"
+        ])
+        
+        logger.info("Development servers started successfully")
         
         try:
+            # Keep the script running
             while True:
                 time.sleep(1)
+                # Check if either process has terminated
+                if django_process.poll() is not None or fastapi_process.poll() is not None:
+                    logger.error("One of the servers has terminated unexpectedly")
+                    raise Exception("Server terminated")
         except KeyboardInterrupt:
             logger.info("Shutting down servers...")
-            # Clean shutdown of processes
-            if django_process and django_process.poll() is None:
-                django_process.terminate()
-            if fastapi_process and fastapi_process.poll() is None:
-                fastapi_process.terminate()
-            sys.exit(0)
+        finally:
+            # Clean up processes
+            for process in [django_process, fastapi_process]:
+                if process and process.poll() is None:
+                    process.terminate()
+                    process.wait(timeout=5)
             
     except Exception as e:
         logger.error(f"Error in development mode: {e}")
@@ -289,7 +342,7 @@ if __name__ == "__main__":
                       default='all', help='Specify which deployment step to run')
     
     args = parser.parse_args()
-
+    
     try:
         if args.mode == 'deploy':
             if args.step == 'all':

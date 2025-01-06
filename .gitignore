@@ -5,6 +5,8 @@
 *.xlsx
 *.json
 *.wav
+*.docx
+test.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -15,6 +17,7 @@ __pycache__/
 *.so
 
 data/
+assets/
 
 #Environment folders
 /django_venv/
