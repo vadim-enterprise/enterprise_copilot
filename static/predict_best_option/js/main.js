@@ -550,10 +550,9 @@ try {
                 transcription === 'Connected to transcription service...') {
                 return;
             }
-        
+            
             elements.summaryOutput.innerHTML = 'Generating summary...';
-            elements.insightsOutput.innerHTML = 'Generating insights...';
-        
+            
             const csrftoken = getCSRFToken();
             if (!csrftoken) {
                 console.error('CSRF token not found');
@@ -593,6 +592,13 @@ try {
             })
             .then(data => {
                 console.log('Parsed response data:', data);
+
+                if (data.insights) {
+                    updateInsightsDisplay(data.insights);
+                }
+                else{
+                    elements.insightsOutput.innerHTML = 'Generating insights...';
+                }
         
                 if (!data) {
                     throw new Error('Empty response from server');
@@ -608,7 +614,7 @@ try {
                 
                 // Update insights with new text
                 if (typeof data.insights === 'string') {
-                    updateContentBox(elements.insightsOutput, data.insights, 'Insights');
+                    updateInsightsDisplay(data.insights);
                 }
 
                 console.log('Successfully updated UI with insights and summary');
@@ -1226,6 +1232,122 @@ try {
                 showNotification('Failed to add to knowledge base', 'error');
             }
         };
+
+        function updateInsightsDisplay(newInsights) {
+            const insightsOutput = document.getElementById('insights-output');
+            
+            // Create sections if they don't exist
+            if (!document.getElementById('current-insights')) {
+                insightsOutput.innerHTML = `
+                    <div class="insights-section-header">Current Key Points</div>
+                    <div id="current-insights" class="insights-section"></div>
+                    <div class="insights-section-header">New Insights</div>
+                    <div id="new-insights" class="insights-section"></div>
+                `;
+            }
+            
+            const currentInsights = document.getElementById('current-insights');
+            const newInsightsDiv = document.getElementById('new-insights');
+            
+            // Limit words for new insights
+            const limitedNewInsights = limitWords(newInsights, 100);
+            newInsightsDiv.innerHTML = limitedNewInsights;
+            
+            // Update current insights with a delay
+            if (limitedNewInsights && limitedNewInsights.length > 50) {
+                setTimeout(() => {
+                    if (limitedNewInsights !== currentInsights.innerHTML) {
+                        currentInsights.innerHTML = limitedNewInsights;
+                    }
+                }, 5000);
+            }
+        }
+
+        // Helper function to merge insights intelligently
+        function mergeInsights(currentContent, newContent) {
+            if (!currentContent) return newContent;
+            
+            // Keep the most recent 3-5 key points in current insights
+            const currentPoints = currentContent.split('\n').filter(point => point.trim());
+            const newPoints = newContent.split('\n').filter(point => point.trim());
+            
+            // Combine unique points, keeping the most recent ones
+            const uniquePoints = [...new Set([...currentPoints, ...newPoints])];
+            return uniquePoints.slice(-5).join('\n');  // Keep last 5 points
+        }
+
+        // Modify the existing insights update logic
+        function updateInsights(insights) {
+            if (!insights) return;
+            
+            try {
+                // Format insights if they're in JSON format
+                let formattedInsights = typeof insights === 'string' ? 
+                    insights : formatInsightsToHTML(insights);
+                    
+                // Limit words while maintaining sentence structure
+                formattedInsights = limitWords(formattedInsights, 100);
+                
+                // Update the display
+                const insightsOutput = document.getElementById('insights-output');
+                if (insightsOutput) {
+                    insightsOutput.innerHTML = formattedInsights;
+                }
+                
+            } catch (error) {
+                console.error('Error updating insights:', error);
+            }
+        }
+
+        // Add some CSS styles
+        const style = document.createElement('style');
+        style.textContent = `
+            .insights-section-header {
+                font-weight: bold;
+                color: var(--gs-navy);
+                margin: 15px 0 10px 0;
+                padding-bottom: 5px;
+                border-bottom: 1px solid var(--gs-border);
+            }
+            
+            .insights-section {
+                margin-bottom: 15px;
+                padding: 10px;
+                background: var(--gs-white);
+                border-radius: 4px;
+                font-size: 13px;
+                line-height: 1.4;
+            }
+            
+            #current-insights {
+                border-left: 3px solid var(--gs-gold);
+            }
+            
+            #new-insights {
+                border-left: 3px solid var(--gs-blue);
+            }
+        `;
+        document.head.appendChild(style);
+
+        function limitWords(text, maxWords = 100) {
+            if (!text) return '';
+            
+            const sentences = text.split(/[.!?]+/).filter(s => s.trim());
+            let wordCount = 0;
+            let result = [];
+            
+            for (let sentence of sentences) {
+                const wordsInSentence = sentence.trim().split(/\s+/).length;
+                if (wordCount + wordsInSentence <= maxWords) {
+                    result.push(sentence.trim());
+                    wordCount += wordsInSentence;
+                } else {
+                    break;
+                }
+            }
+            
+            return result.join('. ') + '.';
+        }
     });
 
 } catch (error) {
