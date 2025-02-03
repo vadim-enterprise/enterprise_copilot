@@ -83,19 +83,6 @@ class SpeechManager {
             const offer = await this.pc.createOffer();
             await this.pc.setLocalDescription(offer);
 
-            // Wait for ICE gathering to complete
-            await new Promise((resolve) => {
-                if (this.pc.iceGatheringState === 'complete') {
-                    resolve();
-                } else {
-                    this.pc.onicegatheringstatechange = () => {
-                        if (this.pc.iceGatheringState === 'complete') {
-                            resolve();
-                        }
-                    };
-                }
-            });
-
             const sdpResponse = await fetch(`${this.baseUrl}?model=${this.model}`, {
                 method: "POST",
                 body: offer.sdp,
@@ -111,23 +98,33 @@ class SpeechManager {
             };
             await this.pc.setRemoteDescription(answer);
 
-            // Wait for data channel to be ready
+            // Wait for both ICE gathering and data channel to be ready
             await new Promise((resolve, reject) => {
                 const timeout = setTimeout(() => {
                     reject(new Error('Data channel connection timeout'));
                 }, 10000);
 
-                if (this.dc.readyState === 'open') {
-                    clearTimeout(timeout);
-                    this.isDataChannelReady = true;
-                    resolve();
-                    return;
-                }
+                const checkReady = () => {
+                    if (this.dc.readyState === 'open' && 
+                        this.pc.iceGatheringState === 'complete') {
+                        clearTimeout(timeout);
+                        this.isDataChannelReady = true;
+                        resolve();
+                    }
+                };
 
+                // Check initial state
+                checkReady();
+
+                // Set up event listeners
                 this.dc.onopen = () => {
-                    clearTimeout(timeout);
-                    this.isDataChannelReady = true;
-                    resolve();
+                    console.log('Data channel opened');
+                    checkReady();
+                };
+
+                this.pc.onicegatheringstatechange = () => {
+                    console.log(`ICE gathering state changed: ${this.pc.iceGatheringState}`);
+                    checkReady();
                 };
 
                 this.dc.onerror = (error) => {
