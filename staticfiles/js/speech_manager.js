@@ -11,6 +11,11 @@ class SpeechManager {
 
     async initialize() {
         try {
+            if (this.isInitialized) {
+                console.log('Already initialized, cleaning up first...');
+                this.cleanup();
+            }
+
             // Get ephemeral key from server
             const tokenResponse = await fetch("http://127.0.0.1:8001/api/session", {
                 method: "GET",
@@ -22,17 +27,48 @@ class SpeechManager {
             });
 
             const data = await tokenResponse.json();
+            console.log('Session response:', data);
+
             if (!data.client_secret?.value) {
                 console.error('Invalid session response:', data);
                 throw new Error('Invalid session response from server');
             }
 
             const EPHEMERAL_KEY = data.client_secret.value;
+            console.log('Got ephemeral key:', EPHEMERAL_KEY.substring(0, 8) + '...');
 
             // Create peer connection
             this.pc = new RTCPeerConnection({
                 iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
             });
+
+            // Set up connection state monitoring first
+            this.pc.onconnectionstatechange = () => {
+                const state = this.pc.connectionState;
+                console.log(`Connection state changed: ${state}`);
+                if (state === 'failed' || state === 'closed') {
+                    this.cleanup();
+                }
+            };
+
+            this.pc.oniceconnectionstatechange = () => {
+                console.log(`ICE connection state: ${this.pc.iceConnectionState}`);
+            };
+
+            this.pc.onicegatheringstatechange = () => {
+                console.log(`ICE gathering state: ${this.pc.iceGatheringState}`);
+            };
+
+            // Create data channel before setting up connection
+            this.dc = this.pc.createDataChannel("oai-events", {
+                ordered: true,
+                protocol: 'json',
+                negotiated: true,
+                id: 0
+            });
+
+            // Set up data channel handlers immediately
+            this.setupDataChannel();
 
             // Set up audio playback
             this.audioEl = document.createElement("audio");
@@ -43,13 +79,22 @@ class SpeechManager {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             this.pc.addTrack(stream.getTracks()[0]);
 
-            // Set up data channel
-            this.dc = this.pc.createDataChannel("oai-events");
-            this.setupDataChannel();
-
             // Create and send offer
             const offer = await this.pc.createOffer();
             await this.pc.setLocalDescription(offer);
+
+            // Wait for ICE gathering to complete
+            await new Promise((resolve) => {
+                if (this.pc.iceGatheringState === 'complete') {
+                    resolve();
+                } else {
+                    this.pc.onicegatheringstatechange = () => {
+                        if (this.pc.iceGatheringState === 'complete') {
+                            resolve();
+                        }
+                    };
+                }
+            });
 
             const sdpResponse = await fetch(`${this.baseUrl}?model=${this.model}`, {
                 method: "POST",
@@ -66,11 +111,37 @@ class SpeechManager {
             };
             await this.pc.setRemoteDescription(answer);
 
+            // Wait for data channel to be ready
+            await new Promise((resolve, reject) => {
+                const timeout = setTimeout(() => {
+                    reject(new Error('Data channel connection timeout'));
+                }, 10000);
+
+                if (this.dc.readyState === 'open') {
+                    clearTimeout(timeout);
+                    this.isDataChannelReady = true;
+                    resolve();
+                    return;
+                }
+
+                this.dc.onopen = () => {
+                    clearTimeout(timeout);
+                    this.isDataChannelReady = true;
+                    resolve();
+                };
+
+                this.dc.onerror = (error) => {
+                    clearTimeout(timeout);
+                    reject(error);
+                };
+            });
+
             this.isInitialized = true;
             console.log('WebRTC connection established');
 
         } catch (error) {
             console.error('Error initializing WebRTC:', error);
+            this.cleanup();
             throw error;
         }
     }
