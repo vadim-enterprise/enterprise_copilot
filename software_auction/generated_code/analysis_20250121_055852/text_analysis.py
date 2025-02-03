@@ -1,0 +1,6 @@
+# Perform sentiment analysis to understand the tone of the conversation
+from textblob import TextBlob\n\ntext = "It's awesome to be with George. Right? It'd be an honor to talk to him. For young women returning to their parents, the neighborhood is their life. Who else is in the neighborhoods? It's not that hard. Hey, why aren't you playing? Now, who else is in the neighborhood? This is progressive for what we are right now. It is. Oh. Hmm. The neighborhoods, I can't say people are different than us, but we can say women are equal all the way across. Very well. That's awkward."\nblob = TextBlob(text)\n\nsentiment = blob.sentiment.polarity
+
+
+# Extract key phrases to understand the main topics of the conversation
+from gensim.summarization import keywords\n\ntext = "It's awesome to be with George. Right? It'd be an honor to talk to him. For young women returning to their parents, the neighborhood is their life. Who else is in the neighborhoods? It's not that hard. Hey, why aren't you playing? Now, who else is in the neighborhood? This is progressive for what we are right now. It is. Oh. Hmm. The neighborhoods, I can't say people are different than us, but we can say women are equal all the way across. Very well. That's awkward."\nkey_words = keywords(text, words=5, lemmatize=True)

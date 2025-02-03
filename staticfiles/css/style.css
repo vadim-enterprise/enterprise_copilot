@@ -1,0 +1,1263 @@
+/* Reset and Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    line-height: 1.6;
+    background-color: #f8f9fa;
+    color: #333;
+}
+
+/* Top Bar */
+.top-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 90px;
+    background-color: #f8fafc;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 0 20px;
+    z-index: 100;
+}
+
+/* DNA Button Styles */
+.company-dna-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 24px;
+    background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
+    color: white;
+    border: none;
+    border-radius: 16px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 18px;
+    transition: all 0.3s ease;
+    margin-left: 20px;
+    height: 64px;
+    box-shadow: 0 4px 15px rgba(0, 184, 148, 0.2);
+}
+
+.company-dna-btn:hover {
+    background: linear-gradient(135deg, #00cec9 0%, #00b894 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 184, 148, 0.3);
+}
+
+.dna-icon {
+    width: 40px;
+    height: 40px;
+    transition: all 0.3s ease;
+}
+
+/* DNA Strands Animation */
+.dna-strand-1 {
+    animation: dnaWave 4s ease-in-out infinite;
+    stroke-dasharray: 60;
+    stroke-dashoffset: 0;
+}
+
+.dna-strand-2 {
+    animation: dnaWave 4s ease-in-out infinite reverse;
+    stroke-dasharray: 60;
+    stroke-dashoffset: 0;
+}
+
+.dna-pairs {
+    opacity: 0.8;
+    animation: dnaPairs 4s ease-in-out infinite;
+}
+
+@keyframes dnaWave {
+    0%, 100% {
+        d: path("M7 2c0 0 10 4 10 10s-10 10-10 10");
+    }
+    50% {
+        d: path("M7 2c0 0 10 6 10 10s-10 6-10 10");
+    }
+}
+
+@keyframes dnaPairs {
+    0%, 100% {
+        transform: scaleX(1);
+    }
+    50% {
+        transform: scaleX(0.8);
+    }
+}
+
+/* Button Text Style */
+.company-dna-btn span {
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    font-size: 16px;
+    background: linear-gradient(to right, #fff, #e8fff8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: none;
+}
+
+/* Hover Effect */
+.company-dna-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at center, rgba(255, 255, 255, 0.2) 0%, transparent 70%);
+    border-radius: 16px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.company-dna-btn:hover::before {
+    opacity: 1;
+}
+
+/* Add a subtle glow effect */
+.company-dna-btn::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
+    border-radius: 18px;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    filter: blur(8px);
+}
+
+.company-dna-btn:hover::after {
+    opacity: 0.4;
+}
+
+/* Main Content */
+.main-content {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    margin-top: -80px;
+}
+
+/* Logo */
+.logo {
+    margin-bottom: 40px;
+    text-align: center;
+}
+
+.logo h1 {
+    font-size: 48px;
+    color: #2c3e50;
+    font-weight: 700;
+}
+
+/* Search Container */
+.search-container {
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.search-box {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+#webSearchInput {
+    flex: 1;
+    padding: 16px 24px;
+    font-size: 18px;
+    border: 2px solid #ddd;
+    border-radius: 30px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+#webSearchInput:focus {
+    border-color: #3498db;
+    box-shadow: 0 4px 12px rgba(52,152,219,0.15);
+    outline: none;
+}
+
+/* Search Button Loading State */
+#webSearchButton {
+    position: relative;
+    padding: 0 32px;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    font-size: 18px;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 54px; /* Match input height */
+}
+
+#webSearchButton:hover {
+    background-color: #2980b9;
+}
+
+#webSearchButton:active {
+    transform: translateY(1px);
+}
+
+/* Keep existing loading state styles */
+#webSearchButton.loading {
+    background-color: #2980b9;
+    pointer-events: none;
+}
+
+/* Search Results Container */
+.search-results {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.3s ease;
+}
+
+.search-results.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.search-icon {
+    font-size: 20px;
+}
+
+/* Search Results */
+.search-results {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    padding: 20px;
+    margin-top: 20px;
+    min-height: 200px;
+}
+
+.result-card {
+    padding: 16px;
+    border-bottom: 1px solid #eee;
+}
+
+.result-card:last-child {
+    border-bottom: none;
+}
+
+.result-card h3 {
+    color: #2c3e50;
+    margin-bottom: 8px;
+}
+
+.result-card p {
+    color: #666;
+    margin-bottom: 8px;
+}
+
+.result-card a {
+    color: #3498db;
+    text-decoration: none;
+}
+
+.result-card a:hover {
+    text-decoration: underline;
+}
+
+/* Global Styles and Variables */
+:root {
+    --primary-color: #2563eb;
+    --secondary-color: #1e40af;
+    --accent-color: #3b82f6;
+    --background-color: #f8fafc;
+    --text-color: #1e293b;
+    --border-color: #e2e8f0;
+    --success-color: #10b981;
+    --warning-color: #f59e0b;
+    --error-color: #ef4444;
+    --box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --transition: all 0.3s ease;
+    --primary-color-rgb: 59, 130, 246;
+    --accent-color-rgb: 239, 68, 68;
+}
+
+/* Base Styles */
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+/* Header Styles */
+.main-header {
+    background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+    padding: 1rem 0;
+    box-shadow: var(--box-shadow);
+}
+
+.header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 0;
+}
+
+.logo h1 {
+    color: white;
+    font-size: 2rem;
+    margin: 0;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+}
+
+.search-bar {
+    flex: 1;
+    max-width: 600px;
+    margin: 0 2rem;
+    position: relative;
+}
+
+.search-bar input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    border: 2px solid transparent;
+    font-size: 1rem;
+    transition: var(--transition);
+}
+
+.search-bar input:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.search-button {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.search-button:hover {
+    background-color: var(--secondary-color);
+}
+
+/* Navigation Styles */
+.main-nav {
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 0.5rem 0;
+    margin-top: 1rem;
+}
+
+.main-nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    gap: 2rem;
+}
+
+.main-nav a {
+    color: white;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    transition: var(--transition);
+}
+
+.main-nav a:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Main Content Area */
+.main-content {
+    display: grid;
+    grid-template-columns: 250px 1fr;
+    gap: 2rem;
+    padding: 2rem 0;
+}
+
+/* Categories Sidebar */
+.categories-sidebar {
+    background-color: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: var(--box-shadow);
+}
+
+.category-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.category-list li {
+    margin-bottom: 0.5rem;
+}
+
+.category-list a {
+    display: block;
+    padding: 0.75rem 1rem;
+    color: var(--text-color);
+    text-decoration: none;
+    border-radius: 6px;
+    transition: var(--transition);
+}
+
+.category-list a:hover {
+    background-color: var(--background-color);
+    color: var(--primary-color);
+}
+
+/* Products Grid */
+.products-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.product-card {
+    background-color: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: var(--box-shadow);
+    transition: var(--transition);
+}
+
+.product-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+}
+
+.product-image {
+    height: 200px;
+    overflow: hidden;
+}
+
+.product-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.product-info {
+    padding: 1.5rem;
+}
+
+.product-info h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.25rem;
+    color: var(--text-color);
+}
+
+.product-description {
+    color: #64748b;
+    margin-bottom: 1rem;
+}
+
+.product-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.price {
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.add-to-cart {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.add-to-cart:hover {
+    background-color: var(--secondary-color);
+}
+
+/* User Actions */
+.user-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.login-button, .register-button {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.login-button {
+    background-color: transparent;
+    border: 2px solid white;
+    color: white;
+}
+
+.register-button {
+    background-color: white;
+    border: none;
+    color: var(--primary-color);
+}
+
+.cart-icon {
+    position: relative;
+    padding: 0.5rem;
+    cursor: pointer;
+}
+
+.cart-count {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background-color: var(--accent-color);
+    color: white;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 999px;
+}
+
+/* Footer Styles */
+.main-footer {
+    background-color: #1e293b;
+    color: white;
+    padding: 4rem 0 2rem;
+    margin-top: 4rem;
+}
+
+.footer-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+.footer-section h3 {
+    color: white;
+    margin-bottom: 1rem;
+}
+
+.footer-section ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.footer-section a {
+    color: #94a3b8;
+    text-decoration: none;
+    transition: var(--transition);
+    display: block;
+    padding: 0.5rem 0;
+}
+
+.footer-section a:hover {
+    color: white;
+}
+
+.footer-bottom {
+    text-align: center;
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid #334155;
+    color: #94a3b8;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .main-content {
+        grid-template-columns: 1fr;
+    }
+    
+    .categories-sidebar {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .header-top {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .search-bar {
+        margin: 1rem 0;
+        width: 100%;
+    }
+    
+    .main-nav ul {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .products-grid {
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    }
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.product-card {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Search Results Styles */
+.search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: var(--box-shadow);
+    margin-top: 0.5rem;
+    max-height: 400px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+}
+
+.search-results.active {
+    display: block;
+}
+
+.search-result-item {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.search-result-item:last-child {
+    border-bottom: none;
+}
+
+.search-result-item:hover {
+    background-color: var(--background-color);
+}
+
+.search-result-title {
+    font-weight: 600;
+    color: var(--text-color);
+    margin-bottom: 0.25rem;
+}
+
+.search-result-description {
+    font-size: 0.875rem;
+    color: #64748b;
+}
+
+.search-icon {
+    margin-right: 0.5rem;
+}
+
+.loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Chatbot Styles */
+.chatbot-widget {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 350px;
+    height: 500px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: transform 0.3s ease;
+    z-index: 1000;
+}
+
+.chatbot-widget.minimized {
+    transform: translateY(calc(100% - 50px));
+}
+
+.chatbot-header {
+    background: #007bff;
+    color: white;
+    padding: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.chatbot-title {
+    margin: 0;
+    font-size: 1.1em;
+}
+
+.chatbot-controls {
+    display: flex;
+    gap: 10px;
+}
+
+.chatbot-controls button {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    padding: 5px;
+    font-size: 1.2em;
+    transition: opacity 0.3s ease;
+}
+
+.chatbot-controls button:hover {
+    opacity: 0.8;
+}
+
+.chatbot-messages {
+    flex-grow: 1;
+    padding: 15px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    scroll-behavior: smooth;
+    padding-bottom: 70px;
+    max-height: calc(100% - 70px);
+}
+
+.message {
+    max-width: 85%;
+    padding: 12px 16px;
+    border-radius: 18px;
+    margin-bottom: 5px;
+    font-size: 14px;
+    line-height: 1.5;
+    position: relative;
+    word-wrap: break-word;
+}
+
+.user-message {
+    background: #007bff;
+    color: white;
+    align-self: flex-end;
+    border-bottom-right-radius: 5px;
+}
+
+.bot-message {
+    background: #f0f2f5;
+    color: #1c1e21;
+    align-self: flex-start;
+    border-bottom-left-radius: 5px;
+}
+
+.chatbot-input {
+    padding: 15px;
+    border-top: 1px solid #dee2e6;
+    background: white;
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+}
+
+.chatbot-form {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    position: relative;
+}
+
+.chatbot-form input {
+    flex-grow: 1;
+    padding: 12px;
+    border: 1px solid #dee2e6;
+    border-radius: 20px;
+    font-size: 14px;
+    transition: border-color 0.3s ease;
+}
+
+.chatbot-form input:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+}
+
+.chatbot-form button {
+    padding: 10px 20px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+    font-weight: 500;
+    min-width: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.chatbot-form button:hover {
+    background: #0056b3;
+    transform: translateY(-1px);
+}
+
+/* Voice Bot Styles */
+.voice-bot-toggle {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    padding: 8px;
+    font-size: 20px;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.voice-bot-toggle.voice-bot-active {
+    color: #ffd700;
+    text-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+    transform: scale(1.1);
+}
+
+.mic-button {
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 18px;
+    padding: 0;
+    margin: 0;
+}
+
+.mic-button:hover {
+    background: #0056b3;
+    transform: translateY(-1px);
+}
+
+.mic-button.recording {
+    background-color: #ff4444;
+    box-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
+    transform: scale(1.1);
+}
+
+.mic-button.processing {
+    background-color: #ffaa00;
+    cursor: wait;
+    transform: scale(1);
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+.mic-button.pulse {
+    animation: pulse 0.5s ease infinite;
+}
+
+/* Notification Styles */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 10px 20px;
+    border-radius: 5px;
+    color: white;
+    z-index: 1001;
+    animation: slideIn 0.3s ease-out;
+}
+
+.notification.success {
+    background-color: #28a745;
+}
+
+.notification.error {
+    background-color: #dc3545;
+}
+
+.notification.warning {
+    background-color: #ffc107;
+    color: #333;
+}
+
+.notification.info {
+    background-color: #17a2b8;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+/* Loading Animation */
+.typing-indicator {
+    display: flex;
+    gap: 4px;
+    padding: 8px 12px;
+    background: #f0f2f5;
+    border-radius: 18px;
+    width: fit-content;
+    margin-bottom: 5px;
+}
+
+.typing-indicator span {
+    width: 6px;
+    height: 6px;
+    background: #90949c;
+    border-radius: 50%;
+    animation: typing 1s infinite ease-in-out;
+}
+
+.typing-indicator span:nth-child(1) { animation-delay: 0.2s; }
+.typing-indicator span:nth-child(2) { animation-delay: 0.4s; }
+.typing-indicator span:nth-child(3) { animation-delay: 0.6s; }
+
+@keyframes typing {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+}
+
+/* Enrich Button Loading State */
+.enrich-button.loading {
+    position: relative;
+    color: transparent;
+}
+
+.enrich-button.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 16px;
+    height: 16px;
+    margin: -8px 0 0 -8px;
+    border: 2px solid white;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* DNA Icon Pulse Animation */
+@keyframes dnaPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+.company-dna-btn .dna-icon {
+    animation: dnaPulse 2s ease-in-out infinite;
+}
+
+/* Ensure text remains white and clear */
+.company-dna-btn span {
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Search Results Styles */
+.loading-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 20px;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.result-card {
+    padding: 20px;
+    border-bottom: 1px solid #eee;
+    transition: all 0.3s ease;
+}
+
+.result-card:hover {
+    background-color: #f8f9fa;
+}
+
+.result-card:last-child {
+    border-bottom: none;
+}
+
+.result-card h3 {
+    color: #2c3e50;
+    margin-bottom: 8px;
+    font-size: 18px;
+}
+
+.result-card p {
+    color: #666;
+    margin-bottom: 12px;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.result-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.result-link {
+    color: #3498db;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.result-link:hover {
+    text-decoration: underline;
+}
+
+.add-to-kb {
+    padding: 6px 12px;
+    background-color: #2ecc71;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.add-to-kb:hover {
+    background-color: #27ae60;
+    transform: translateY(-1px);
+}
+
+.no-results, .error-message {
+    text-align: center;
+    padding: 40px 20px;
+    color: #666;
+}
+
+.error-message {
+    color: #e74c3c;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+
+/* Top Menu Styles */
+.top-menu {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background-color: #2c3e50;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    z-index: 1000;
+}
+
+.menu-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.menu-button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    background-color: #34495e;
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.menu-button:hover {
+    background-color: #3498db;
+}
+
+.company-dna {
+    background-color: #e74c3c;
+}
+
+.company-dna:hover {
+    background-color: #c0392b;
+}
+
+/* Main Content Area */
+.main-content {
+    margin-top: 80px;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    min-height: calc(100vh - 80px);
+}
+
+/* Search Container Styles */
+.search-container {
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.search-box {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+#webSearchInput {
+    flex: 1;
+    padding: 12px;
+    border: 2px solid #ddd;
+    border-radius: 24px;
+    font-size: 16px;
+    transition: border-color 0.3s;
+}
+
+#webSearchInput:focus {
+    border-color: #3498db;
+    outline: none;
+}
+
+#webSearchButton {
+    padding: 12px 24px;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 24px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+#webSearchButton:hover {
+    background-color: #2980b9;
+}
+
+.search-results {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding: 20px;
+    min-height: 200px;
+}
+
+/* Chatbot Widget Styles (Updated) */
+.chatbot-widget {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    width: 350px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s;
+}
+
+/* Keep existing chatbot styles and add any necessary adjustments */ 

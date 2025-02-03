@@ -16,8 +16,12 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
+from software_auction.views import get_session_token
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path('', include('predict_best_option.urls')),
-]
+    path('', include('software_auction.urls')),
+    path('api/get-session-token/', get_session_token, name='get_session_token'),
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

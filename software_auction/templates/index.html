@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+{% csrf_token %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ToolsHub Search</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="icon" type="image/x-icon" href="{% static 'software_auction/favicon.ico' %}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+    <div id="notification-container" class="notification-container"></div>
+    
+    <!-- Simple Top Bar with Company DNA Button -->
+    <nav class="top-bar">
+        <button class="company-dna-btn">
+            <svg class="dna-icon" viewBox="0 0 24 24" width="24" height="24">
+                <!-- Double Helix DNA Structure -->
+                <path class="dna-strand-1" d="M7 2c0 0 10 4 10 10s-10 10-10 10" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      stroke-width="2"
+                      stroke-linecap="round"/>
+                <path class="dna-strand-2" d="M17 2c0 0 -10 4 -10 10s10 10 10 10" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      stroke-width="2"
+                      stroke-linecap="round"/>
+                <!-- Base Pairs -->
+                <path class="dna-pairs" d="M7 4h10 M7 8h10 M7 12h10 M7 16h10 M7 20h10" 
+                      stroke="currentColor" 
+                      stroke-width="1.5"
+                      stroke-linecap="round"/>
+            </svg>
+            <span>Company DNA</span>
+        </button>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+        <!-- Logo -->
+        <div class="logo">
+            <h1>ToolsHub</h1>
+        </div>
+
+        <!-- Centered Search -->
+        <div class="search-container">
+            <div class="search-box">
+                <input type="text" id="webSearchInput" placeholder="Search something...">
+                <button id="webSearchButton" type="button">
+                    <span class="search-icon">🔍</span>
+                </button>
+            </div>
+            <div id="searchResults" class="search-results"></div>
+        </div>
+    </main>
+
+    <!-- Chatbot Widget (Unchanged) -->
+    <div class="chatbot-widget" id="chatbotWidget">
+        <div class="chatbot-header" id="chatbotHeader">
+            <div class="chatbot-title">ToolsHub Assistant</div>
+            <div class="chatbot-controls">
+                <button class="voice-bot-btn" id="voiceBotToggle" title="Switch to Voice Bot">🎤</button>
+                <button class="enrich-kb-btn" id="enrichKnowledgeBase" title="Enrich Knowledge Base">📚</button>
+                <button class="minimize-btn" id="minimizeChatbot">−</button>
+            </div>
+        </div>
+        <div class="chatbot-container" id="chatbotContainer">
+            <div class="chatbot-messages" id="chatbotMessages">
+                <div class="message bot-message">
+                    <div class="message-content">
+                        Hello! I'm your ToolsHub assistant. How can I help you find the right software solutions?
+                    </div>
+                </div>
+            </div>
+            <div class="chatbot-input">
+                <form id="chatbotForm">
+                    <input type="text" id="chatbotInput" placeholder="Type your message...">
+                    <button type="submit">
+                        <span class="send-icon">📤</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="{% static 'js/speech_manager.js' %}"></script>
+    <script src="{% static 'js/chatbot.js' %}"></script>
+    <script src="{% static 'js/search.js' %}"></script>
+</body>
+</html>

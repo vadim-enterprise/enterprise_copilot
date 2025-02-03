@@ -1,0 +1,4 @@
+# Add questions for background research here
+What are the latest developments in RAG systems?
+How to optimize ChromaDB for large datasets?
+What are best practices for real-time transcription? 

@@ -1,0 +1,2 @@
+# Analysis of the sentiment of the text to assess its negativity
+import nltk\nnltk.download('vader_lexicon')\nfrom nltk.sentiment.vader import SentimentIntensityAnalyzer\n\nsentences = ['This is worse, it's worse, it's worse.']\nsid = SentimentIntensityAnalyzer()\n\nfor sentence in sentences:\n    print(sentence)\n    ss = sid.polarity_scores(sentence)\n    for k in sorted(ss):\n         print('{0}: {1}, '.format(k, ss[k]), end='')\n    print()
