@@ -57,7 +57,7 @@ async def add_cors_headers(request: Request, call_next):
 app.include_router(websearch_router.router, prefix="/api/websearch")
 
 @speech_router.get("/session")
-async def create_session():
+async def create_session(config: str = None):
     """Create a session with OpenAI's realtime API"""
     try:
         logger.info("Creating realtime session with OpenAI")
@@ -65,6 +65,9 @@ async def create_session():
             "Authorization": f"Bearer {os.getenv('OPENAI_API_KEY')}",
             "Content-Type": "application/json"
         }
+        
+        # Parse the config if provided
+        session_config = json.loads(config) if config else {}
         
         # Log the API key (first few characters)
         api_key = os.getenv('OPENAI_API_KEY')
@@ -76,7 +79,8 @@ async def create_session():
                 headers=headers,
                 json={
                     "model": "gpt-4o-realtime-preview-2024-12-17",
-                    "voice": "verse"
+                    "voice": "verse",
+                    **session_config  # Merge the provided config
                 }
             ) as response:
                 logger.info(f"OpenAI response status: {response.status}")

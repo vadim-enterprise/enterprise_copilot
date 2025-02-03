@@ -7,6 +7,28 @@ class SpeechManager {
         this.isDataChannelReady = false;
         this.baseUrl = "https://api.openai.com/v1/realtime";
         this.model = "gpt-4o-realtime-preview-2024-12-17";
+
+        this.sessionConfig = {
+           // modalities: ["audio", "text"],
+            instructions: "You only know that printers can be red and nothing else.",
+            voice: "sage",
+            input_audio_format: "pcm16",  
+            output_audio_format: "pcm16", 
+            turn_detection: {
+                type: "server_vad",
+                threshold: 0.5,
+                prefix_padding_ms: 300,
+                silence_duration_ms: 200,
+                create_response: true
+            },
+            input_audio_transcription: {
+                model: "whisper-1"
+            },
+            tool_choice: "auto",
+            temperature: 0.6,
+            max_response_output_tokens: "inf",
+            tools: []
+        };
     }
 
     async initialize() {
@@ -17,7 +39,11 @@ class SpeechManager {
             }
 
             // Get ephemeral key from server
-            const tokenResponse = await fetch("http://127.0.0.1:8001/api/session", {
+            const sessionParams = new URLSearchParams({
+                config: JSON.stringify(this.sessionConfig)
+            });
+
+            const tokenResponse = await fetch(`http://127.0.0.1:8001/api/session?${sessionParams}`, {
                 method: "GET",
                 headers: {
                     "Accept": "application/json"
@@ -213,6 +239,25 @@ class SpeechManager {
         }
         this.isInitialized = false;
         this.isDataChannelReady = false;
+    }
+
+    updateConfig(config) {
+        this.sessionConfig = {
+            ...this.sessionConfig,
+            ...config
+        };
+        console.log('Updated session config:', this.sessionConfig);
+    }
+
+    // Method to set audio format
+    setAudioFormat(format) {
+        const validFormats = ['pcm16'];
+        if (!validFormats.includes(format)) {
+            throw new Error(`Invalid audio format. Must be one of: ${validFormats.join(', ')}`);
+        }
+        this.sessionConfig.input_audio_format = format;
+        this.sessionConfig.output_audio_format = format;
+        console.log(`Audio format set to: ${format}`);
     }
 }
 
