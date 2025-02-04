@@ -8,12 +8,16 @@ import torch
 import json
 import time
 import uuid
+import glob
 from ..models.search_types import ModelChoice
 from django.conf import settings
 from chromadb.config import Settings
+from chromadb.utils import embedding_functions
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 MODEL_CHOICE = "openai"
+KNOWLEDGE_BASE_DIR = Path(__file__).resolve().parent.parent.parent / 'knowledge_base'
 
 class HybridRAG:
     def __init__(self):
@@ -22,16 +26,23 @@ class HybridRAG:
         self.model_name = settings.AI_MODEL_CONFIG.get('OPENAI_MODEL', 'gpt-4')
         self.temperature = settings.AI_MODEL_CONFIG.get('TEMPERATURE', 0.7)
         
+        # Ensure knowledge base directory exists
+        KNOWLEDGE_BASE_DIR.mkdir(parents=True, exist_ok=True)
+        logger.info(f"Knowledge base directory: {KNOWLEDGE_BASE_DIR}")
+        
         # Initialize OpenAI client
         self.openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
         
-        # Initialize ChromaDB with new architecture
-        chroma_dir = os.getenv('CHROMA_DATA_DIR', settings.BASE_DIR)
-        os.makedirs(chroma_dir, exist_ok=True)
+        # Set up paths
+        self.base_dir = Path(__file__).resolve().parent.parent.parent
+        self.persist_directory = str(self.base_dir / 'data' / 'chroma_db')
         
-        # Use PersistentClient instead of Client
+        # Create directory if it doesn't exist
+        Path(self.persist_directory).mkdir(parents=True, exist_ok=True)
+        
+        # Initialize ChromaDB client
         self.chroma_client = chromadb.PersistentClient(
-            path=chroma_dir
+            path=self.persist_directory
         )
         
         # Initialize or get collection
@@ -39,6 +50,9 @@ class HybridRAG:
         
         # Store last query metadata
         self.last_query_metadata = {}
+        
+        # Load initial knowledge base
+        self._load_knowledge_base()
 
     def generate_response(self, prompt: str, context: str = None, use_llama: bool = None) -> str:
         """Generate response using configured model"""
@@ -537,12 +551,18 @@ class HybridRAG:
         except:
             return False
 
-    def add_to_knowledge_base(self, document: Dict[str, Any]) -> bool:
+    def add_to_knowledge_base(self, document: Dict[str, Any], save_to_file: bool = True) -> bool:
         """Add a new document to the knowledge base"""
         try:
             if not document.get('content'):
                 logger.warning("Empty content in document")
                 return False
+            
+            # Save to file if requested
+            if save_to_file:
+                file_path = KNOWLEDGE_BASE_DIR / f"learned_{int(time.time())}.txt"
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(document['content'])
             
             # Generate embedding
             embedding = self.openai_client.embeddings.create(
@@ -555,7 +575,10 @@ class HybridRAG:
             self.collection.add(
                 documents=[document['content']],
                 embeddings=[embedding],
-                metadatas=[document['metadata']],
+                metadatas=[{
+                    **document['metadata'],
+                    'file_path': str(file_path) if save_to_file else None
+                }],
                 ids=[doc_id]
             )
             
@@ -595,4 +618,41 @@ class HybridRAG:
         except Exception as e:
             logger.error(f"Error clearing knowledge base: {str(e)}")
             return False
+
+    async def _load_knowledge_base(self):
+        """Load documents from knowledge base directory"""
+        try:
+            # Get all text files from knowledge base directory
+            knowledge_files = glob.glob(str(KNOWLEDGE_BASE_DIR / "**/*.txt"), recursive=True)
+            logger.info(f"Found {len(knowledge_files)} knowledge base files")
+
+            for file_path in knowledge_files:
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as file:
+                        content = file.read().strip()
+                        if content:  # Only process non-empty files
+                            # Generate embedding
+                            embedding = self.openai_client.embeddings.create(
+                                input=content,
+                                model="text-embedding-ada-002"
+                            ).data[0].embedding
+
+                            # Add to ChromaDB with metadata
+                            doc_id = str(uuid.uuid4())
+                            self.collection.add(
+                                documents=[content],
+                                embeddings=[embedding],
+                                metadatas=[{
+                                    'source': str(file_path),
+                                    'timestamp': time.time(),
+                                    'type': 'knowledge_base'
+                                }],
+                                ids=[doc_id]
+                            )
+                            logger.info(f"Loaded knowledge base file: {file_path}")
+                except Exception as e:
+                    logger.error(f"Error processing knowledge base file {file_path}: {str(e)}")
+
+        except Exception as e:
+            logger.error(f"Error loading knowledge base: {str(e)}")
     

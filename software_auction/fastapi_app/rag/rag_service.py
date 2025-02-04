@@ -1,12 +1,15 @@
 import logging
-from .hybrid_rag import HybridRAG
+from .hybrid_rag import HybridRAG, KNOWLEDGE_BASE_DIR
 from django.http import JsonResponse
-from ..services.websearch_service import WebSearchService
+from ..services.websearch_service import WebSearchService as WebSearcher
 import time
 import uuid
 import os
 import json
 from django.conf import settings
+from pathlib import Path
+from typing import Dict, Any, List
+from ..services.knowledge_service import KnowledgeService
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +18,10 @@ class RAGService:
 
     def __init__(self):
         self.conversation_history = []
+        # Use the same knowledge base directory as hybrid_rag
+        self.data_dir = KNOWLEDGE_BASE_DIR
+        self.data_dir.mkdir(parents=True, exist_ok=True)
+        logger.info(f"RAG Service using knowledge base directory: {self.data_dir}")
 
     def add_to_history(self, user_input, bot_response):
         """Add the latest user input and bot response to the conversation history."""
@@ -52,28 +59,36 @@ class RAGService:
         return model_response
 
     @staticmethod
-    def handle_enrich_knowledge_base(request) -> JsonResponse:
+    def handle_enrich_knowledge_base(data: dict) -> dict:
         """Handle knowledge base enrichment request"""
         try:
             rag = HybridRAG()
             
-            # Get the base directory
-            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            # Get the knowledge base data directory
+            base_dir = KNOWLEDGE_BASE_DIR / 'data'
+            base_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Initialize services at the start
+            knowledge_service = KnowledgeService()
+            web_searcher = WebSearcher()
             
             # Path to text.txt and questions.txt
-            text_path = os.path.join(base_dir, 'data', 'text.txt')
-            questions_path = os.path.join(base_dir, 'data', 'questions.txt')
+            text_path = base_dir / 'text.txt'
+            questions_path = base_dir / 'questions.txt'
             
             logger.info(f"Looking for text.txt at: {text_path}")
             logger.info(f"Looking for questions.txt at: {questions_path}")
             
             processed_count = 0
+            text_summary = ""
+            full_content = []
             
             # Process text.txt first
             if os.path.exists(text_path):
                 logger.info("Found text.txt file")
                 with open(text_path, 'r', encoding='utf-8') as f:
                     text_content = f.read()
+                    full_content.append(text_content)
                     logger.info(f"Read {len(text_content)} characters from text.txt")
                     
                 # Generate summary and content type analysis
@@ -109,49 +124,33 @@ class RAGService:
                     
                     # Split the response into summary and content type
                     summary_section = analysis_result.split("CONTENT TYPE:")[0].replace("SUMMARY:", "").strip()
+                    text_summary = summary_section  # Store summary for response
                     content_type_section = analysis_result.split("CONTENT TYPE:")[1].strip()
                     
                     # Add text content to knowledge base with enhanced metadata
                     document = {
-                        'content': f"""
-                        ORIGINAL TEXT SUMMARY:
-                        {summary_section}
-                        
-                        CONTENT TYPE ANALYSIS:
-                        {content_type_section}
-                        """.strip(),
+                        'content': text_content,
                         'metadata': {
                             'source': 'text.txt',
                             'type': 'base_knowledge',
-                            'content_type': content_type_section.split('\n')[0],  # First line of content type section
+                            'content_type': content_type_section.split('\n')[0],
                             'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
                             'has_summary': True,
-                            'summary_length': len(summary_section.split())
+                            'summary': summary_section
                         }
                     }
                     
-                    # Generate embedding and add to ChromaDB
-                    embedding = rag.openai_client.embeddings.create(
-                        input=document['content'],
-                        model=settings.EMBEDDING_MODEL_NAME
-                    ).data[0].embedding
-                    
-                    doc_id = str(uuid.uuid4())
-                    rag.collection.add(
-                        documents=[document['content']],
-                        embeddings=[embedding],
-                        metadatas=[document['metadata']],
-                        ids=[doc_id]
-                    )
+                    # Add to knowledge base
+                    rag.add_to_knowledge_base(document)
                     processed_count += 1
                     logger.info("Successfully added text.txt to knowledge base with summary and content type analysis")
                     
                 except Exception as e:
                     logger.error(f"Error analyzing text content: {str(e)}")
-                    return JsonResponse({
+                    return {
                         'status': 'error',
                         'message': f'Error analyzing text content: {str(e)}'
-                    })
+                    }
             
             # Process questions.txt and their answers
             if os.path.exists(questions_path):
@@ -159,11 +158,6 @@ class RAGService:
                 with open(questions_path, 'r', encoding='utf-8') as f:
                     questions = f.readlines()
                     logger.info(f"Read {len(questions)} questions from questions.txt")
-                
-                # Initialize knowledge service for processing search results
-                from ..services.knowledge_service import KnowledgeService
-                knowledge_service = KnowledgeService()
-                web_searcher = WebSearcher()
                 
                 for question in questions:
                     question = question.strip()
@@ -275,17 +269,19 @@ class RAGService:
                         logger.info(f"Added synthesized answer for question: {question}")
             
             logger.info(f"Enrichment complete. Processed {processed_count} documents total.")
-            return JsonResponse({
+            return {
                 'status': 'success',
-                'message': f'Knowledge base enriched successfully with {processed_count} documents'
-            })
+                'message': f'Knowledge base enriched successfully with {processed_count} documents',
+                'text_summary': text_summary if text_summary else "No text.txt summary available",
+                'full_content': '\n\n'.join(full_content)
+            }
             
         except Exception as e:
             logger.error(f"Error enriching knowledge base: {str(e)}")
-            return JsonResponse({
+            return {
                 'status': 'error',
                 'message': str(e)
-            })
+            }
 
     @staticmethod
     def handle_inspect_knowledge_base(request) -> JsonResponse:
@@ -325,6 +321,117 @@ class RAGService:
             
         except Exception as e:
             logger.error(f"Error clearing knowledge base: {str(e)}")
+            return JsonResponse({
+                'status': 'error',
+                'message': str(e)
+            })
+
+    async def save_document(self, content: str, metadata: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Save a document to the knowledge base"""
+        try:
+            # Generate unique filename
+            timestamp = int(time.time())
+            file_path = self.data_dir / f"rag_service_{timestamp}.txt"
+            
+            # Save document
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(content)
+            
+            logger.info(f"Saved document to {file_path}")
+            
+            return {
+                'status': 'success',
+                'file_path': str(file_path),
+                'metadata': metadata or {}
+            }
+            
+        except Exception as e:
+            logger.error(f"Error saving document: {e}")
+            return {
+                'status': 'error',
+                'error': str(e)
+            }
+
+    async def load_documents(self) -> List[Dict[str, Any]]:
+        """Load all documents from the knowledge base"""
+        try:
+            documents = []
+            for file_path in self.data_dir.glob('*.txt'):
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        content = f.read().strip()
+                        if content:
+                            documents.append({
+                                'content': content,
+                                'file_path': str(file_path),
+                                'metadata': {
+                                    'source': str(file_path),
+                                    'timestamp': file_path.stat().st_mtime,
+                                    'type': 'rag_service'
+                                }
+                            })
+                except Exception as e:
+                    logger.error(f"Error loading document {file_path}: {e}")
+            
+            return documents
+            
+        except Exception as e:
+            logger.error(f"Error loading documents: {e}")
+            return []
+
+    async def delete_document(self, file_path: str) -> Dict[str, Any]:
+        """Delete a document from the knowledge base"""
+        try:
+            path = Path(file_path)
+            if path.exists():
+                path.unlink()
+                logger.info(f"Deleted document {file_path}")
+                return {
+                    'status': 'success',
+                    'message': f'Document {file_path} deleted'
+                }
+            else:
+                return {
+                    'status': 'error',
+                    'error': f'Document {file_path} not found'
+                }
+        except Exception as e:
+            logger.error(f"Error deleting document: {e}")
+            return {
+                'status': 'error',
+                'error': str(e)
+            }
+
+    @staticmethod
+    def handle_text_query(request) -> JsonResponse:
+        """Handle text mode query using only knowledge base"""
+        try:
+            data = json.loads(request.body)
+            query = data.get('query')
+            
+            if not query:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Query is required'
+                })
+            
+            rag = HybridRAG()
+            
+            # Get context from knowledge base
+            context = rag.get_factual_context(query)
+            
+            # Generate response using only knowledge base context
+            response = rag.generate_response(query, context=context)
+            
+            return JsonResponse({
+                'status': 'success',
+                'response': response,
+                'context_used': context,
+                'sources': [s.get('source') for s in rag.last_query_metadata.get('metadata', [])]
+            })
+            
+        except Exception as e:
+            logger.error(f"Error processing text query: {str(e)}")
             return JsonResponse({
                 'status': 'error',
                 'message': str(e)

@@ -39,6 +39,9 @@ class Chatbot {
         this.maxRetries = 3;
         this.fallbackMode = false;
         
+        // Check if FastAPI server is running
+        this.startupCheck();
+        
         // Use the global SpeechManager
         this.speechManager = new window.SpeechManager();
         this.isSpeechMode = false;
@@ -84,7 +87,7 @@ class Chatbot {
         const typingIndicator = this.addTypingIndicator();
 
         try {
-            const response = await this.getResponse(message);
+            const response = await this.sendMessage(message, this.isVoiceMode);
             // Remove typing indicator
             typingIndicator.remove();
             
@@ -94,6 +97,87 @@ class Chatbot {
             typingIndicator.remove();
             await this.addMessage('Sorry, I encountered an error. Please try again.', 'bot');
             console.error('Chatbot error:', error);
+        }
+    }
+
+    async sendMessage(message, isVoice = false) {
+        try {
+            this.addUserMessage(message);
+            this.setTypingIndicator(true);
+            
+            // Different handling for text mode vs voice mode
+            let response;
+            if (!isVoice) {
+                // Text mode - use knowledge base only
+                const textResponse = await fetch(`${this.fastApiUrl}/api/rag/query`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ query: message })
+                });
+
+                if (!textResponse.ok) {
+                    throw new Error(`HTTP error! status: ${textResponse.status}`);
+                }
+
+                const data = await textResponse.json();
+                if (data.status === 'success') {
+                    response = data.response;
+                    // Optionally show sources
+                    if (data.sources && data.sources.length > 0) {
+                        response += '\n\nSources:\n' + data.sources.join('\n');
+                    }
+                } else {
+                    throw new Error(data.message || 'Error processing query');
+                }
+            } else {
+                // Voice mode - existing implementation
+                response = await this.processVoiceMessage(message);
+            }
+            
+            this.addBotMessage(response);
+            
+        } catch (error) {
+            console.error('Error sending message:', error);
+            this.addBotMessage('Sorry, I encountered an error processing your message.');
+        } finally {
+            this.setTypingIndicator(false);
+        }
+    }
+
+    async processVoiceMessage(message) {
+        try {
+            // Use the same RAG query endpoint as text mode
+            const response = await fetch(`${this.fastApiUrl}/api/rag/query`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ query: message })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            if (data.status === 'success') {
+                let botResponse = data.response;
+                
+                // If in voice mode, also get speech synthesis
+                if (this.isVoiceMode) {
+                    await this.speechManager.speakText(botResponse);
+                }
+                
+
+                return botResponse;
+            } else {
+                throw new Error(data.message || 'Error processing query');
+            }
+        } catch (error) {
+            console.error('Error processing message:', error);
+            throw error;
         }
     }
 
@@ -143,12 +227,6 @@ class Chatbot {
 
         this.messages.appendChild(messageDiv);
         this.scrollToBottom();
-
-        // Speak bot messages in voice mode
-        if (type === 'bot' && this.isVoiceMode) {
-            console.log('Attempting to speak:', content);
-            await this.speakText(content);
-        }
     }
 
     addTypingIndicator() {
@@ -183,24 +261,29 @@ class Chatbot {
 
         try {
             this.enrichBtn.classList.add('loading');
-            
             await this.addMessage('Enriching knowledge base...', 'bot');
 
-            const response = await fetch('/enrich-knowledge-base/', {
+            const response = await fetch(`${this.fastApiUrl}/api/rag/enrich`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
+                    'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    source: 'chatbot_request'
-                })
+                body: JSON.stringify({})
             });
 
             const data = await response.json();
 
             if (data.status === 'success') {
                 await this.addMessage('Knowledge base has been successfully enriched! I now have more information to help you.', 'bot');
+                
+                if (data.text_summary) {
+                    await this.addMessage('Summary of loaded content:\n\n' + data.text_summary, 'bot');
+                }
+                
+                // Update voice bot instructions with full knowledge base content
+                if (data.full_content && window.speechManager) {
+                    window.speechManager.setKnowledgeBase(data.full_content);
+                }
                 
                 this.showNotification('Knowledge base enriched successfully!', 'success');
             } else {
@@ -232,34 +315,76 @@ class Chatbot {
 
     async toggleVoiceMode() {
         try {
-            this.isVoiceMode = !this.isVoiceMode;
-            this.voiceBotBtn.classList.toggle('voice-bot-active', this.isVoiceMode);
+            // Check server availability before enabling voice mode
+            if (!this.serverAvailable) {
+                const isAvailable = await this.checkServer();
+                if (!isAvailable) {
+                    this.showNotification('Voice mode unavailable - server not running', 'error');
+                    return;
+                }
+            }
 
             if (this.isVoiceMode) {
-                this.micButton.style.display = 'inline-block';
-                this.showNotification('Voice mode activated', 'success');
-            } else {
-                this.speechManager.cleanup();
+                // Turning off voice mode
+                this.isVoiceMode = false;
+                this.isSpeechMode = false;  // Ensure speech mode is off
+                this.voiceBotBtn.classList.remove('active');
                 this.micButton.style.display = 'none';
-                if (this.isSpeechMode) {
-                    this.isSpeechMode = false;
-                    this.micButton.classList.remove('recording');
+                this.micButton.classList.remove('recording');
+                
+                if (window.speechManager) {
+                    // First stop listening
+                    window.speechManager.stopListening();
+                    // Then cleanup the connection
+                    await window.speechManager.cleanup();
+                    // Reset the manager state
+                    window.speechManager.isInitialized = false;
+                    window.speechManager.isDataChannelReady = false;
                 }
+                
                 this.showNotification('Voice mode deactivated', 'info');
+            } else {
+                // Turning on voice mode
+                this.isVoiceMode = true;
+                this.voiceBotBtn.classList.add('active');
+                this.micButton.style.display = 'inline-block';
+                
+                // Initialize speech manager
+                if (window.speechManager) {
+                    await window.speechManager.initialize();
+                }
+                
+                this.showNotification('Voice mode activated', 'success');
             }
         } catch (error) {
             console.error('Error toggling voice mode:', error);
-            this.showNotification('Failed to toggle voice mode', 'error');
+            this.showNotification('Error toggling voice mode', 'error');
+            
+            // Reset all states in case of error
             this.isVoiceMode = false;
-            this.voiceBotBtn.classList.remove('voice-bot-active');
+            this.isSpeechMode = false;
+            this.voiceBotBtn.classList.remove('active');
+            this.micButton.classList.remove('recording');
+            this.micButton.style.display = 'none';
+            
+            if (window.speechManager) {
+                window.speechManager.stopListening();
+                await window.speechManager.cleanup();
+                window.speechManager.isInitialized = false;
+                window.speechManager.isDataChannelReady = false;
+            }
         }
     }
 
     async initializeServices() {
         try {
+            console.log('Initializing services...');
             await this.checkServerWithRetry();
             if (!this.serverAvailable) {
+                console.log('Server not available, enabling fallback mode');
                 this.enableFallbackMode();
+            } else {
+                console.log('Services initialized successfully');
             }
         } catch (error) {
             console.error('Error initializing services:', error);
@@ -270,88 +395,52 @@ class Chatbot {
     enableFallbackMode() {
         this.fallbackMode = true;
         this.voiceBotBtn.style.display = 'none';
+        this.enrichBtn.style.display = 'none';  // Hide enrich button in fallback mode
         this.showNotification('Running in text-only mode. Voice features unavailable.', 'warning');
         console.log('Chatbot running in fallback mode (text-only)');
     }
 
     async checkServer() {
         try {
+            console.log('Attempting to connect to FastAPI server...');
             const response = await fetch(`${this.fastApiUrl}/api/health-check`, {
                 method: 'GET',
                 headers: {
-                    'Accept': 'application/json'
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
                 },
-                mode: 'cors'  // Add CORS mode
             });
-            
+
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                throw new Error(`Server responded with status: ${response.status}`);
             }
-            
+
             const data = await response.json();
-            this.serverAvailable = data.status === 'ok';
-            return this.serverAvailable;
-            
+            return data.status === 'ok';
         } catch (error) {
             console.error('Error checking FastAPI server:', error);
-            this.serverAvailable = false;
+            if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+                console.log('FastAPI server is not running or not accessible');
+                this.showNotification('Voice features unavailable - FastAPI server not running', 'warning');
+            }
             return false;
         }
     }
 
     async checkServerWithRetry() {
-        while (this.serverCheckRetries < this.maxRetries) {
+        console.log('Checking FastAPI server availability...');
+        for (let i = 0; i < this.maxRetries; i++) {
+            console.log(`Attempt ${i + 1} of ${this.maxRetries}`);
             if (await this.checkServer()) {
-                return true;
+                this.serverAvailable = true;
+                console.log('FastAPI server is available');
+                return;
             }
-            this.serverCheckRetries++;
-            // Add delay between retries
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            console.log(`Server check attempt ${i + 1} failed, retrying...`);
+            await new Promise(resolve => setTimeout(resolve, 2000));
         }
-        return false;
-    }
-
-    async speakText(text) {
-        if (!this.isVoiceMode || !this.serverAvailable) return;
-        
-        try {
-            const formData = new FormData();
-            formData.append('text', text);
-            formData.append('voice', this.currentVoice);
-            
-            console.log('Sending TTS request:', text);
-            
-            const response = await fetch(`${this.fastApiUrl}/api/generate-speech/`, {
-                method: 'POST',
-                body: formData,
-                mode: 'cors',
-                credentials: 'include'
-            });
-            
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-            }
-            
-            const data = await response.json();
-            console.log('TTS Response:', data);
-            
-            if (data.status === 'success' && data.audio_url) {
-                const audioUrl = `${this.fastApiUrl}${data.audio_url}`;
-                console.log('Playing audio from:', audioUrl);
-                
-                this.audio = new Audio(audioUrl);
-                await this.audio.play().catch(error => {
-                    console.error('Audio playback error:', error);
-                    throw error;
-                });
-            } else {
-                throw new Error(data.message || 'Failed to generate speech');
-            }
-        } catch (error) {
-            console.error('Error playing speech:', error);
-            this.showNotification('Failed to play speech: ' + error.message, 'error');
-        }
+        console.log('Server check failed after all retries');
+        this.serverAvailable = false;
     }
 
     async toggleSpeechMode(e) {
@@ -377,7 +466,9 @@ class Chatbot {
             }
         } else {
             this.micButton.classList.remove('recording');
-            this.speechManager.stopListening();
+            await this.speechManager.stopListening();
+            await this.speechManager.cleanup();
+            this.speechManager.isInitialized = false;
             this.showNotification('Speech mode deactivated', 'info');
         }
     }
@@ -387,8 +478,8 @@ class Chatbot {
             // Add user's speech to chat
             await this.addMessage(text, 'user');
             
-            // Get and display assistant's response
-            const response = await this.getResponse(text);
+            // Use the same processing as text mode
+            const response = await this.processVoiceMessage(text);
             await this.addMessage(response, 'bot');
         }
     }
@@ -426,6 +517,60 @@ class Chatbot {
         } catch (error) {
             console.error('Error fetching company DNA:', error);
             this.showNotification('Failed to fetch company information', 'error');
+        }
+    }
+
+    addUserMessage(message) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message user-message';
+        messageDiv.innerHTML = `<div class="message-content">${message}</div>`;
+        this.messages.appendChild(messageDiv);
+        this.scrollToBottom();
+    }
+
+    addBotMessage(message) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message bot-message';
+        messageDiv.innerHTML = `<div class="message-content">${message}</div>`;
+        this.messages.appendChild(messageDiv);
+        this.scrollToBottom();
+    }
+
+    setTypingIndicator(show) {
+        const existingIndicator = this.messages.querySelector('.typing-indicator');
+        if (existingIndicator) {
+            existingIndicator.remove();
+        }
+        if (show) {
+            const indicator = document.createElement('div');
+            indicator.className = 'message bot-message typing-indicator';
+            indicator.innerHTML = '<div class="dots"><span></span><span></span><span></span></div>';
+            this.messages.appendChild(indicator);
+            this.scrollToBottom();
+        }
+    }
+
+    async startupCheck() {
+        console.log('Performing initial FastAPI server check...');
+        try {
+            // First check if server is already running
+            const isAvailable = await this.checkServer();
+            if (isAvailable) {
+                console.log('FastAPI server is already running');
+                this.serverAvailable = true;
+                return;
+            }
+
+            // If not running, show message to start server
+            console.log('FastAPI server not running. Please start the server using:');
+            console.log('python run.py in the fastapi_app directory');
+            this.showNotification('Please start the FastAPI server for voice features', 'warning');
+            
+            // Enable fallback mode
+            this.enableFallbackMode();
+        } catch (error) {
+            console.error('Startup check failed:', error);
+            this.enableFallbackMode();
         }
     }
 }

@@ -7,11 +7,17 @@ class SpeechManager {
         this.isDataChannelReady = false;
         this.baseUrl = "https://api.openai.com/v1/realtime";
         this.model = "gpt-4o-realtime-preview-2024-12-17";
+        this.ragContext = null;
+        this.lastQuery = null;
+        this.conversationHistory = [];
+        this.fastApiUrl = 'http://127.0.0.1:8001';
+
+        // Store the knowledge base content
+        this.knowledgeBaseContent = null;
+        this.instructions = null;
 
         this.sessionConfig = {
-           // modalities: ["audio", "text"],
-            instructions: "You only know that printers can be red and nothing else.",
-            voice: "verse",
+            voice: "coral",
             input_audio_format: "pcm16",  
             output_audio_format: "pcm16", 
             turn_detection: {
@@ -31,11 +37,92 @@ class SpeechManager {
         };
     }
 
+    setKnowledgeBase(content) {
+        this.knowledgeBaseContent = content;
+        console.log('Knowledge base content updated:', content.substring(0, 100) + '...');
+        if (this.isInitialized) {
+            console.log('Updating instructions for active session');
+            this.updateInstructions();
+            this.reinitializeSession();
+        }
+    }
+
+    async reinitializeSession() {
+        try {
+            // Store current config except instructions
+            const currentConfig = { ...this.sessionConfig };
+            delete currentConfig.instructions;
+            
+            await this.cleanup();
+            
+            // Restore config except instructions
+            this.sessionConfig = {
+                ...currentConfig,
+                instructions: this.sessionConfig.instructions
+            };
+            
+            await this.initialize();
+            console.log('Session reinitialized with new instructions');
+        } catch (error) {
+            console.error('Error reinitializing session:', error);
+        }
+    }
+
+    updateInstructions() {
+        if (this.knowledgeBaseContent) {
+            console.log('Setting instructions with knowledge base content');
+            this.sessionConfig.instructions = `
+                ${this.knowledgeBaseContent}
+            `.trim();
+        } else {
+            console.log('Using default instructions - no knowledge base content available');
+            this.sessionConfig.instructions = "You are a helpful assistant. Be concise and accurate in your responses.";
+        }
+        console.log('Instructions updated:', this.sessionConfig.instructions.substring(0, 100) + '...');
+    }
+
+    async loadInstructions() {
+        try {
+            console.log('Attempting to load instructions from server...');
+            const response = await fetch(`${this.fastApiUrl}/api/rag/text_instructions`);
+            console.log('Response status:', response.status);
+            if (response.ok) {
+                const data = await response.json();
+                console.log('Response data:', data);
+                if (data.instructions) {
+                    this.instructions = data.instructions;
+                    console.log('Loaded instructions from text.txt:', this.instructions.substring(0, 100) + '...');
+                } else {
+                    console.warn('No instructions found in response');
+                }
+            } else {
+                console.error('Failed to load instructions:', await response.text());
+            }
+        } catch (error) {
+            console.error('Error loading instructions:', error);
+        }
+    }
+
     async initialize() {
         try {
             if (this.isInitialized) {
                 console.log('Already initialized, cleaning up first...');
-                this.cleanup();
+                // Store current config except instructions
+                const currentConfig = { ...this.sessionConfig };
+                delete currentConfig.instructions;
+                await this.cleanup();
+                // Restore config except instructions
+                this.sessionConfig = {
+                    ...currentConfig,
+                    instructions: this.sessionConfig.instructions
+                };
+            }
+
+            // Load instructions from text.txt before initializing
+            await this.loadInstructions();
+            if (this.instructions) {
+                // Only update instructions, preserve other config
+                this.sessionConfig.instructions = this.instructions;
             }
 
             // Get ephemeral key from server
@@ -43,7 +130,10 @@ class SpeechManager {
                 config: JSON.stringify(this.sessionConfig)
             });
 
-            const tokenResponse = await fetch(`http://127.0.0.1:8001/api/session?${sessionParams}`, {
+            const sessionUrl = `http://127.0.0.1:8001/api/speech/session?${sessionParams}`;
+            console.log('Requesting session at:', sessionUrl);
+
+            const tokenResponse = await fetch(sessionUrl, {
                 method: "GET",
                 headers: {
                     "Accept": "application/json"
@@ -52,10 +142,16 @@ class SpeechManager {
                 mode: 'cors'
             });
 
+            if (!tokenResponse.ok) {
+                const errorText = await tokenResponse.text();
+                console.error('Session request failed:', tokenResponse.status, errorText);
+                throw new Error(`Session request failed: ${tokenResponse.status} ${errorText}`);
+            }
+
             const data = await tokenResponse.json();
             console.log('Session response:', data);
 
-            if (!data.client_secret?.value) {
+            if (data?.status !== 'success' || !data?.client_secret?.value) {
                 console.error('Invalid session response:', data);
                 throw new Error('Invalid session response from server');
             }
@@ -200,11 +296,81 @@ class SpeechManager {
         }));
     }
 
-    stopListening() {
-        if (this.dc && this.isDataChannelReady) {
-            this.dc.send(JSON.stringify({
-                type: "stop_listening"
-            }));
+    async stopListening() {
+        try {
+            if (this.dc && this.isDataChannelReady) {
+                // Send stop listening command to the server
+                this.dc.send(JSON.stringify({
+                    type: "stop_listening"
+                }));
+                // Wait for the command to be sent
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                // Close the data channel
+                this.dc.close();
+                this.dc = null;
+            }
+            
+            // Reset state
+            this.isDataChannelReady = false;
+            this.isInitialized = false;
+            
+            // Close the peer connection
+            if (this.pc) {
+                await this.pc.close();
+                this.pc = null;
+            }
+            
+            console.log('Stopped listening and cleaned up connections');
+        } catch (error) {
+            console.error('Error stopping listening:', error);
+            // Force cleanup on error
+            this.dc = null;
+            this.pc = null;
+            this.isDataChannelReady = false;
+            this.isInitialized = false;
+        }
+    }
+
+    async updateRagContext(query) {
+        try {
+            const response = await fetch(`${this.fastApiUrl}/api/rag/query`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ query: query }),
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to fetch RAG context');
+            }
+            
+            const data = await response.json();
+            if (data.status === 'success' && data.context_used) {
+                // Update instructions with the new context
+                const newInstructions = `
+                    You are a helpful assistant. Use the following context to answer questions:
+                    
+                    ${data.context_used}
+                    
+                    If you cannot answer based on this context, say so clearly.
+                    Be concise and accurate in your responses.
+                `.trim();
+                
+                // Update the session config
+                this.sessionConfig.instructions = newInstructions;
+                
+                // Send the updated instructions to the realtime session
+                if (this.isDataChannelReady && this.dc) {
+                    this.dc.send(JSON.stringify({
+                        type: "update_context",
+                        instructions: newInstructions
+                    }));
+                }
+            }
+        } catch (error) {
+            console.error('Error updating RAG context:', error);
         }
     }
 
@@ -212,9 +378,14 @@ class SpeechManager {
         switch (event.type) {
             case "transcript":
                 this.onTranscript?.(event.text);
+                // Then update RAG context for next interaction
+                this.updateRagContext(event.text);
                 break;
             case "audio":
                 this.onAudio?.(event.data);
+                break;
+            case "context_updated":
+                console.log('Context updated successfully');
                 break;
             default:
                 console.log('Unknown event:', event);
@@ -229,16 +400,31 @@ class SpeechManager {
         this.onAudio = callback;
     }
 
-    cleanup() {
-        if (this.pc) {
-            this.pc.close();
-            this.pc = null;
+    async cleanup() {
+        // Just clean up resources without sending stop command
+        try {
+            // Close data channel if it exists
+            if (this.dc) {
+                this.dc.close();
+                this.dc = null;
+            }
+
+            // Close peer connection if it exists
+            if (this.pc) {
+                await this.pc.close();
+                this.pc = null;
+            }
+
+            // Reset all states
+            this.isInitialized = false;
+            this.isDataChannelReady = false;
+            this.ragContext = null;
+            this.lastQuery = null;
+            
+            console.log('Cleanup completed');
+        } catch (error) {
+            console.error('Error during cleanup:', error);
         }
-        if (this.audioEl) {
-            this.audioEl.srcObject = null;
-        }
-        this.isInitialized = false;
-        this.isDataChannelReady = false;
     }
 
     updateConfig(config) {
@@ -258,6 +444,42 @@ class SpeechManager {
         this.sessionConfig.input_audio_format = format;
         this.sessionConfig.output_audio_format = format;
         console.log(`Audio format set to: ${format}`);
+    }
+
+    async getKnowledgeContext(text) {
+        try {
+            const response = await fetch(`${this.fastApiUrl}/api/rag/query`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ query: text })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            return data.status === 'success' ? data : null;
+        } catch (error) {
+            console.error('Error getting knowledge context:', error);
+            return null;
+        }
+    }
+
+    async processUserInput(text) {
+        // Get context from knowledge base
+        const knowledgeData = await this.getKnowledgeContext(text);
+        
+        // Process with OpenAI
+        try {
+            const response = await this.callOpenAI(text);
+            return response;
+        } catch (error) {
+            console.error('Error processing user input:', error);
+            throw error;
+        }
     }
 }
 

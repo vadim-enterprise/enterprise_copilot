@@ -785,7 +785,8 @@ body {
     gap: 10px;
     scroll-behavior: smooth;
     padding-bottom: 70px;
-    max-height: calc(100% - 70px);
+    max-height: 400px;
+    overflow-y: auto;
 }
 
 .message {

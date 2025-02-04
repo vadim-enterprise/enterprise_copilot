@@ -1,0 +1,187 @@
+Procurement and Distribution of Essential Medicines in Punjab.
+Abstract:
+Primary and Secondary Healthcare Department (P&SHD), Government of Punjab, is responsible for providing free of cost public healthcare services within the Punjab province. P&SHD manages a hierarchically organised network of almost three thousand primary and secondary healthcare facilities throughout Punjab. This case highlights the issue of medicine availability in the Punjab healthcare network. The medicine inventories at these facilities are maintained as per the National Essential Drugs List. These medicines are centrally procured in accordance with the applicable procurement and financial regulations. Suppliers deliver medicines to the designated facilities according at the delivery terms agreed upon in the procurement contract. The purpose of this case is to observe how such a complex inventory system is organised within a public-sector entity which operates under strict procurement and financial regulations. The case also aims to highlight the importance of the systematic alignment of demand forecasting, procurement and distribution functions for efficient functioning of the medicine inventory system.
+
+The overcast on December 10th, 2017 strangely mirrored the ominous atmosphere in the meeting room. Several operational changes had been introduced to the medicine procurement and distribution process during the previous year. Today, the meeting’s agenda was to review the overall impact of these changes on medicine inventory volumes and medicine availability measures.  The participants, Ali Jan Khan — Secretary of Primary and Secondary Healthcare Department (P&SHD) — and Areeb Javaid — a consultant at Special Monitoring Unit (SMU) — hoped to discern improvements and identify problem areas for further interventions.
+ P&SHD had undertaken drastic measures in various functional areas of medicine procurement and delivery cycle. For the year 2017-18, the entire procurement (bid selection and purchase order generation) and distribution process had been centralised. This reaped a saving of PKR 1.1 billion in price negotiations from the previous year (total medicine cost was PKR 8 billion in the 2016-17). The department was also hopeful that the setting up of a central warehousing facility called medical stock depot (MSD) would generate additional savings in both transportation and drug testing costs.
+While Ali Jan was generally content with the department’s efforts in realising such improvements, he still felt that further changes were required. He was particularly troubled by reports indicating rising medicine inventory levels at different hospital facilities across Punjab. These reports on medicine stocks at various healthcare facilities, presented by Areeb, were not very promising. 
+The stock levels significantly exceeded the consumption levels for the majority of the medicines analysed as shown in Figure 1 .  An overstocking situation of such an extent was troublesome. It meant that millions of rupees were tied up in inventory, ultimately driving up expiration concerns. The issue hence warranted immediate attention from P&SHD. Ali Jan quickly understood the gravity of the matter and accordingly asked Areeb to set up a team to evaluate the situation at hand, and arrive at possible solutions for the identified problems.
+
+Figure 1: Total Consumption and Stock Levels of Selected Medicines at the Tehsil Headquarter Facilities from June 2016 to June 2017
+Healthcare in Pakistan
+Bordered by Afghanistan, Iran, China and India, Pakistan was at the heart of South Asia. Punjab, located in the country’s northeast, constituted Pakistan’s most populated region (Figure 2). Healthcare services in Pakistan were provided by both public and private sector entities. The private healthcare sector comprised roughly 80% of all outpatient visits whereas 20% of the outpatient population was served by the public sector. The federal legislature passed the 18th Amendment in July 2010, which stipulated provincial autonomy and devolution of legislative and executive authority for public healthcare services .  
+Figure 2: The Locations of Pakistan and Punjab on the World Map
+Primary and Secondary Healthcare Department (P&SHD) 
+Primary and Secondary Healthcare Department (P&SHD) was the main department assigned with the fundamental responsibility of health development within Punjab. P&SHD delivered on several fronts, i.e., promotive, preventive, and curative healthcare services at primary as well as secondary healthcare levels .
+The organisational structure of the P&SHD shown in Exhibit 1 depicts the chain of command at both provincial and district levels. The P&SHD was led by Secretary Ali Jan Khan. He was responsible to the Minister PS&HD and via him, to the Chief Minister and the provincial legislature. The Secretary was assisted by a team comprising members who were senior civil servants and public health specialists. The team included Special Secretary P&SHD, Director General Health Services (DGHS), and five Additional Secretaries (AS) — one each for administration, drug control, vertical programmes, development & finance, and technical wings. 
+The P&SHD’s primary and secondary healthcare facilities, i.e., the first two tiers of service delivery, were under the supervision and control of district governments . The Chief Executive Officer (CEO) at the District Health Authority (DHA) was assisted by the District Health Official (DHO), Additional District Health Official (ADHO), and Medical Superintendents (MSs) of various Tehsil and District Headquarter hospitals (see Exhibit 1).
+Primary (BHU, RHC and MHU) and secondary healthcare (THQ and DHQ) facilities and their catchment populations are shown in Exhibit 2. We look at primary and secondary healthcare in more detail in the subsequent sections.
+Primary Healthcare
+Primary healthcare facilities comprised Basic Health Units (BHUs), Rural Health Centres (RHCs), and Mobile Health Units (MHUs). They offered preventive, outpatient, and basic inpatient healthcare service . They provided eighteen essential medicines at each of the three units by maintaining the requisite inventories. 
+Located at the union council level, a BHU had 2-6 inpatient beds and served a catchment population of up to 25,000 people . Services at BHU were promotive (preventive and curative), and are shown in Exhibit 3. RHCs had a 10-20 inpatient bed capacity and served a catchment population of up to 100,000 people . The services provided at the RHC level were similar to those provided at the BHU level, and are detailed in Exhibit 3. MHUs were introduced in 2010 at tehsil level to provide basic health services to the people of Punjab living in remote rural areas  (see Exhibit 3). There are a total of fifty-four MHUs currently operational in six districts, namely Muzaffargarh, Rajanpur, Mianwali, Dera Gazi Khan, Bahawalpur and Bahawalnagar.
+Secondary Healthcare
+Secondary healthcare constituted the first referral point serving a tehsil or district. It was an intermediary healthcare level that dealt with the provision of specific technical, therapeutic, or diagnostic services covering outpatient, inpatient, and specialist care. In addition to that, specialist consultation procedures and hospital admissions were provided at the secondary level . It consisted of two facilities, i.e., Tehsil Headquarter (THQ) Hospitals and District Headquarter (DHQ) Hospitals, and provided 100 essential medicines at each of these two facilities. 
+THQ and DHQ hospitals were located within each tehsil and district. They catered to populations of 0.5 to 1.0 million and 1 to 3 million respectively . Currently, the majority of the THQ hospitals had 40 to 60 beds while the number of beds in DHQ hospitals started from 80 and went up to 600 . Exhibit 3 lists the services provided at both these facilities. 
+Availability of Medicines in Primary and Secondary HealthCare Facilities
+In the past, the availability of essential medicines in Punjab was problematic. There were multiple stock-outs mainly due to several operational reasons, namely lags in the procurement process, delays in budgets’ release, poor forecasting of medicine requirements, and low budgets for procurement .
+The issue of medicine availability occupied great priority in the CM’s Health Reform Roadmap. The Institute for Public Opinion (IPOR) conducted a baseline-rapid assessment of medical facilities in early 2015. Consumption and stocking status of 52 essential medicines (medicine list derived from EPHS-Essential Package Health Services ) was checked and relevant data from all the secondary health facilities were collected. The collected data were used to calculate the indicator of medicine availability. This particular indicator was defined as having sufficient stock currently present at a facility to cover the consumption level of the previous period.
+In May 2015, this indicator stood at a value of 52% for all secondary healthcare facilities. A target of 100% was set for all secondary healthcare facilities. To achieve this goal, later in mid-2015 a monitoring regime was established for secondary healthcare at SMU, Chief Minister’s Office. SMU employed a methodology of disseminating data packs (monthly progress report of individual districts and hospitals on key performance targets) for this purpose. 
+000Moreover, continuous and rigorous follow-up with MSs and CEOs was conducted to ascertain how much of the target had been achieved. Other efforts included establishing routines such as holding the CEO conference every month to check the availability levels (starting January 2016), and initiating minimum medicine budgets. For example, PKR 300,000 per annum were allocated for each BHU. SMU also worked out minimum stock levels to be maintained at each district.  By February 2016, medicine availability stood at the level of 97%, against the target of 100% (seen in Figure 3 ). The essential medicine list was later revised in 2016 to include 100 medicines. The target of 100% medicine availability for all secondary healthcare facilities was achieved in mid-2016. Another indicator of medicine dispensation was introduced in March 2016, which calculated the percentage of patients getting all the prescribed medicines from secondary healthcare facilities. Data regarding this indicator started being collected from June 2016 onwards and the collection process was still ongoing.
+Medicine dispensation since the introduction of these steps had improved from 46% to 75% . Dispensation of critical medicines in the primary healthcare sector substantially increased from 8.3 million units dispensed in 2014 to 17.7 million in 2016 . Interviews of 5,271 respondents who received care at the primary healthcare facilities revealed that 93% of the medicines were received directly from the health facility, whereas 7% were bought from the market. The availability of medicines had also improved substantially, translating into lesser stock-outs at facility level.
+Acquisition of Medicines in Primary and Secondary Healthcare 
+P&SHD operated with an eloborate system of drug licensing and registration, medicine data collection, procurement and dispensation to acquire medicine inventories. We look at each of these components in detail in the following sections.
+Drug Licensing and Registration
+In Pakistan, every drug needed to be registered and licensed before it can be marketed for use. Drug license was provided by a central regulatory authority, the Central Licensing Board (CLB) (under the Drugs Ordinance/Act 1976). An issued license was valid for five years and may thereafter be renewed for five years at a time . The licensing also ensured that the maximum rate price (MRP) of a licensed drug was fixed and regulated as per the Drugs Ordinance/Act. 
+The procedure for granting a license was lengthy and arduous. It was a stepwise process which included scrutiny of the applicant, inspection of the proposed site (layout of which was drawn in line with current Good Manufacturing Practices requirements), construction of the facility, submission of the application for grant of manufacturing license, and finally an evaluation of the facilities by a panel of experts/inspectors to check the production and quality control measures in place. The inspection report was placed before the CLB in its meeting for consideration . If it was deemed satisfactory by the CLB, the license was granted to the applicant. 
+Medicine Demand Data Collection
+Medicine consumption data at facilities was collected on a daily basis by the hospital staff and reported to P&SHD as annual demand through an e-procurement software by three stakeholders, i.e., medical superintendents at the THQ and DHQ facilities, CEOs of each district who collected demand data through medical officers, and senior medical officers of all the BHUs, RHCs and MHUs.  
+This demand data was then communicated to a focal person at P&SHD, nominated by the Secretary P&SHD, who consolidated and rationalised this information. District budget, expert opinions, consumption rates, category of medicines, burden of disease, and departmental usage (indoor/outdoor/emergency usage) were all considered at the central level to reach a more realistic demand figure. For the procurement cycles of 2016-17 and 2017-18, Dr. Ahmed Sadain Khalid, Additional Secretary of Integrated Reproductive Maternal Newborn Child Health & Nutrition Program (IRMNCH & NP), had been nominated as the focal person for handling procurement demand data.
+The rationalised demand figure was then forwarded to the Procurement Cell where the procurement process was conducted. Mr. Shahbaz Yasin was the procurement specialist who managed medicine procurement at the Procurement Cell. The final purchase orders (POs) were again generated through the e-procurement software which specified the consolidated quantity required at an agreed rate, and issued an order to the selected supplier. 
+The flow of medicine data from district to provincial level is shown in Figure 4.
+ Figure 4: Flow of Medicine Data from District to Provincial Level
+Medicine Procurement in Punjab
+Medicines were procured according to the provisions of the Drugs Act 1976/DRAP Act, 2012/Punjab Drugs (Amendments) Act 2017 and rules framed thereunder . P&SHD employed two types of procurement; about 75-80% of the medicine demand was covered with centralised procurement through a contract with the flexibility to procure 15% above or below of the specified quantity in the contract. The remaining 20-25% was fulfilled through decentralised procurement done at district level, on requirement basis throughout the year. In the next sections, we look at the process of centralised procurement for 2016-17 and 2017-18 that has been completed for both years. 
+Medicine Procurement 2016-17
+The procurement cycle for 2016-17 was run biannually, each intending to cover six months of medicine demand. For primary and secondary healthcare related medicine procurement, the bidding process occurred centrally but the final POs were generated by the districts themselves (see Figure 4). The bidding methodology used in the procurement cycle year 2016-17 was the single stage two envelope methodology. Other than that, the standard procurement process (described below) was followed for procurement cycle year 2016-17 .
+The procurement process complied with the Punjab Public Procurement Regulation Authority (PPRA) Rules, 2014. The standard procurement process involved the expression of interest (EOI) for procurement in the form of the invitation to bid. The prices quoted shall not be more than the trade prices as per MRP (maximum retail price). The procurement document specified certain technical and financial evaluation criteria which had to be fully met by all bidders. All the suppliers who submitted a bid had to go through a physical onsite inspection as per standard procedure. The bidder provided two samples of the quoted packs of each quoted item along with its bid.
+After the submission of the bidding documents in the specified period, technical evaluation of the bidders took place based on the submitted information. Exhibit 4.1 details the technical evaluation criteria in case of manufacturers for 2016-17. Thereupon, the bidders were shortlisted and the result was publicly announced after which a certain time period was reserved for entertaining any contestations.
+After the technical evaluation, the shortlisted bidders underwent another evaluation, this time on the financial parameters (looking at the lowest bid cost for a certain bid quantity). The bid selection criteria for manufacturers used in year 2016-17 was the least cost method (criteria shown in Figure 4.1).  After the allotted time for contestations, the winning bid was selected and information regarding finalised suppliers was forwarded to the CEO office and secondary healthcare facilities. CEOs and MSs at the secondary healthcare facilities then issued POs to the selected vendor as per their medicine requirements. 
+Medicine Procurement 2017-18
+Subtle changes were introduced in the procurement process for year 2017-18. Under the revised procurement process, all medicine procurement relating to primary and secondary healthcare for year 2017-18 was done centrally, on an annual basis through a framework contract .
+The bidding methodology used in 2017-18 was the same as in 2016-17, i.e., single stage two envelope. Likewise, the same standard procurement process for 2016-17 was followed in 2017-18. However, unlike the previous time, quality & cost based selection (QCBS) method was used instead of the least cost method to evaluate the bids in 2017-18. Under the QCBS method, the technical evaluation included checking the bids for two sets of parameters — general and quality parameters . Exhibit 4.2 details these criteria for technical evaluation for manufacturers for year 2017-18
+Similar to the year 2016-17, after the technical evaluation, financial evaluation was carried out. However, in 2017-18, based on the evaluation criteria that was selected, different weights were assigned to the technical and financial evaluation. A final consolidated technical and financial score was calculated that determined the winning bid. 
+In the old procurement process of 2016-17, the bidding process occurred biannually at the centre, but the final POs were generated by the districts themselves. Although these orders covered the demand for every facility (for 100 or so essential medicines procured centrally), they often resulted in multiple demands being generated by a district from a single vendor. Districts also fed erroneous demand figures in the e-procurement system, which led to outrageous demands that had to be manually fixed later. According to Ans Shamas, the Program Officer at Punjab Information Technology Board (PITB): 
+“In addition to keying in ridiculous figures, the districts didn’t even update the delivery status of the batches of medicines they received. If we have to key in everything at the centre, then there is no point of giving any control to the districts.” 
+During 2016-17, despite fixing all the numbers at the centre, not all districts’ demands were fully met. This resulted in multiple procurements being run to procure additional quantities. In order to avert these issues in the later cycles, both procurement and PO generation were centralised during 2017-18. Though the procurement process happened only once, the total quantity was to be delivered in instalments over the specified time period. 
+Moreover, procurement in 2017-18 was conducted through a framework contract with deliveries requested in three instalments, as opposed to a single requested delivery in 2016-17. This was done in order to introduce flexibility into the system so that uncertain demand could be better managed. 
+Furthermore, the technical evaluation criteria used in procurement process of 2016-17 gave higher weightage to the financial capacity/market experience of the applicant; the criteria used in the procurement process of 2017-18 focused more on the manufacturing capability and quality aspects of the applicant.  
+Medicine, Delivery and Storage
+In 2016-17, vendors shipped the medicine stock to the storerooms at the CEO level in every district to cover the BHU/RHC/MHU demands, and directly at the respective facilities to meet the DHQ/THQ requirements. The warehousing network followed a hierarchical structure with medicine inventories kept at three levels — THQ level, DHQ level, and the CEO office level (DHA) which handled the union council facility’s inventories (Figure 5). 
+After the medicines were delivered, a sample from a batch of the supplied medicine was submitted to the drug testing labs for inspection as per the DRAP Act, 2012. The payment for that batch was then released to the supplier within 15 days of obtaining the clearance of the Drug Testing Lab (DTL) report
+
+Figure 5: The Medicine Distribution and Warehousing Network
+For the year 2017-18, the distribution process is still ongoing. All deliveries in 2017-18 will be made in instalments by the supplier to the MSD over a specified time period, Suppliers shall bear the price of delivery to the MSD. The lead-time of the first delivery is set at 60 days with a 15-day grace period. The schedule of the instalments for 2017-18 is given in Table 1 . 
+
+Supply Schedule
+	Delivery of
+Qty. without Penalty
+	Grace Period
+	Total Delivery Period
+
+Immediately after Receiving of Contract/Purchase Order (40% Stock) *	60 Days	15 Days
+	75 Days
+
+Second Instalment (30%)	45 Days	10 Days
+	55 Days
+
+Third Instalment (30%)	30 Days	10 Days
+	40 Days
+
+Table 1: Schedule of Instalments for year 2017-18
+Note: Delivery schedule will be as per contract/purchase order that may be quarterly or half yearly basis or one-time supply, depending on the quantity/exigency of item mentioned on contract/purchase order.
+*Provided the 40% ordered quantity must meet the 40% demand of the District Health Authority.
+For 2017-18, a centralised warehouse facility, i.e., MSD, is being built at Guru Mangat Road in Lahore by IDAP (Infrastructure Development Authority Punjab). Third-party logistics service provider, Tranzum Courier Services (TCS), has agreed to handle the operational aspects (including the warehousing and transportation) of the facility. TCS will deliver it to the individual THQ and DHQ facilities directly, while the stock to the BHUs/RHCs/MHUs will be sent through the CEO office (DHA).  In 2017-18, sampling for DTL testing under DRAP Act, 2011 shall be done at the MSD, and stock shall only be forwarded to the DHQ, THQ and CEO levels after clearance.  
+In 2016-17, samples from each batch received at the CEO office (DHA) and secondary level facilities had been transported to DTL for testing. Since a single vendor handled multiple orders from different districts, medicines of the same batch that went to different facilities resulted in multiple samples of the same batch being tested. However, for the procurement process of 2017-18, after the central MSD is set up, all stock will be centralised. One sample from each batch received will be sent to the DTL for testing, which will significantly lower the number of samples tested. According to Dr. Sadain: 
+“The number of samples given for testing will, in this case, be significantly reduced, as there will be a single order generated to a single vendor under the revised procurement process and all the batches will be consolidated at one central facility. This is a win-win situation for all.”
+Current Situation 
+Areeb was part of the SMU’s team that was assigned the task of improving medicine availability. For each facility, they devised minimum stock levels (per medicine type) and communicated these to relevant officials in the districts. Areeb was tracking the progress of his team’s efforts when he came across some unsettling information. When the SMU team followed up on the stock availability in the next few months, they found the stock levels to have risen exponentially, resulting in considerable overstocking. One of these overstocking situations occurred at the DHQ facility of Attock. Areeb was studying the inventory levels for the Paracetamol 500 mg tablet from July 2015 till September 2017, and those of Ibuprofen 400 mg tablet for the same period (Figure 6 ). The cyclic pattern observed in case of Paracetamol corresponded to the two replenishment cycles per year in the biannual procurement run in 2016-17 (it also depicted the corresponding inventory level). Ibuprofen was supplied once in early 2017, with no past or future supplies for the time period observed. Areeb noticed that the Paracetamol stock had gradually increased over time. Replenishments occurred despite the fact that the inventory was still available at the facility, therefore driving up total inventory levels. Analysis of medicine stock levels at other facilities showed similar trends. 
+Figure 6: Paracetamol 500 mg tablet and Ibuprofen 400 mg tablet inventory level at DHQ Attock. 
+The team at SMU hypothesised several reasons contributing to the overall overstocking situation. According to them, one reason could have been that most of the districts had taken the team’s minimum stock levels at face value. They took them as procurement targets when these were actually meant to serve as stock levels that they should maintain at all times. In this way, perhaps they completely disregarded their existing stock and straightaway ordered the quantities worked out by Areeb and the SMU team. Another possible reason for inventory build-up could be the various rationalisations used at different levels of demand collection, with each echelon adding its own safety stock amount while communicating its demand to the upper level.
+Areeb had scheduled a meeting with Ali Jan to discuss the issue of overstocking in detail. He wondered whether the overstocking issue was merely due to the wrong interpretation of suggested minimum stock levels, or a result of the rationalisations at each step of the data collection process. He thought it could possibly have something to do with how the procurement and distribution of medicines was carried out.  He wondered whether the changes introduced to the procurement and distribution process in 2017-18 would help control the overstocking problem or actually exacerbate the issue. Before stepping into the Secretary’s office, he paced outside, trying to think of possible ways to tackle the problem. “I first need to identify all the problems before I start thinking towards any solutions,” he thought to himself. Areeb was beginning to realise that the situation was much more complicated than he had anticipated. 
+Exhibit 1 : The Organogram of the P&SHD 
+*The organogram constitutes a summarised structure with only reporting lines relevant to this case shown. 
+
+ 
+Exhibit 2 : Districts-wise Primary and Secondary Healthcare Facilities in Punjab 
+DISTRICT NAME	BASIC HEALTH UNIT	RURAL HEALTH CENTER	TEHSIL HEADQUARTER HOSPITAL	DISTRICT HEADQUARTER HOSPITAL
+	No. of Facilities	No. of Hospital Beds	Catchment Area Population	No. of Facilities	No. of Hospital Beds	Catchment Area Population	No. of Facilities	No. of Hospital Beds	Catchment Area Population	No. of Facilities	No. of Hospital Beds	Catchment Area Population
+ATTOCK	63	126	1,128,163	5	100	95,352	5	320	166,833	1	176	102,910
+BAHAWALNAGAR	102	204	1,456,015	10	200	311,160	4	220	373,931	1	259	159,467
+BAHAWALPUR	73	146	1,963,576	11	220	332,589	4	232	257,360			
+BHAKKAR	40	80	1,057,085	5	112	140,731	3	184	111,613	1	333	81,969
+CHAKWAL	65	126	1,182,694	10	190	173,255	4	140	70,618	1	205	93,451
+CHINIOT	36	72	782,943	3	40	73,867	2	40	64,119	1	70	180,054
+D.G KHAN	50	100	1,401,503	10	200	386,967	3	120	100,337			
+FAISALABAD	168	336	2,917,549	14	260	338,647	5	270	398,954			
+GUJRANWALA	92	184	1,685,704	12	240	415,257	3	160	448,771			
+GUJRAT	90	180	1,546,061	9	180	196,627	4	160	105,431			
+HAFIZABAD	32	64	797,905	7	140	177,827	1	60	45,649	1	120	42,784
+JHANG	58	116	1,420,714	10	180	241,417	3	146	129,347	1	276	261,503
+JHELUM	47	94	719,765	6	120	147,743	2	100	37,973	1	258	106,848
+KASUR	82	164	2,069,059	11	200	481,998	4	200	224,713	1	197	319,745
+KHANEWAL	83	166	2,078,883	7	140	235,518	3	180	199,512	1	125	205,963
+KHUSHAB	43	86	737,394	5	60	133,916	4	260	167,550	1	125	63,427
+LAHORE	36	72	1,042,843	6	120	259,549	5	100	221,000			
+LAYYAH	37	74	1,164,339	5	100	171,795	6	240	238,265	1	280	97,079
+LODHRAN	48	96	959,817	4	80	133,517	2	80	170,240	1	125	104,066
+MANDI BAHAUDDIN	49	98	963,427	8	160	188,416	2	100	25,548	1	100	117,257
+MIANWALI	40	80	713,998	10	200	335,319	3	142	103,455	1	313	95,971
+MULTAN	82	164	2,730,296	8	160	297,567	2	120	107,753	1	60	22,370
+MUZAFFARGARH	73	145	2,617,170	12	240	591,529	4	190	274,608	1	240	100,571
+NANKANA SAHIB	47	94	843,188	6	144	160,722	2	188	141,814	1	120	163,526
+NAROWAL	57	122	1,040,591	7	120	127,621	1	80	43,911	1	125	54,529
+OKARA	96	192	1,695,806	10	182	335,373	2	100	213,225	2	335	311,370
+PAKPATTAN	54	108	1,163,943	5	90	130,224	1	60	95,201	1	125	146,377
+RAHIMYAR KHAN	104	208	2,696,534	19	356	609,299	3	200	400,032			
+RAJANPUR	33	66	717,614	6	125	265,091	3	172	332,004	1	133	215,935
+RAWALPINDI	98	196	1,820,591	8	160	165,723	6	362	136,547			
+SAHIWAL	76	152	1,499,188	11	220	387,216	1	120	105,850			
+SARGODHA	128	254	1,958,530	12	240	221,054	10	380	310,777			
+SHEIKHUPURA	79	158	1,860,613	7	168	211,419	4	296	526,374	1	648	408,411
+SIALKOT	88	176	2,264,997	6	120	142,576	4	299	263,356			
+TOBA TEK SINGH	70	140	1,379,436	9	180	221,898	2	266	260,301	1	125	95,095
+VEHARI	74	148	1,916,393	14	280	446,326	2	300	308,313	1	300	113,936
+
+	Exhibit 3: Primary and Secondary Healthcare  
+
+
+ 
+
+Exhibit 4.1 : Technical Evaluation Criteria for Manufacturers - Procurement of Medicines Year 2016-17
+Serial No. 	Description 	Total Marks
+1	Ranking of Firm 	  
+	Current Ranking according to SALS (Pakistan Pharmaceutical Sales Index) 	20
+2	Sales Value of Quoted Product 	  
+ 	Current Share in value according to SALS (Pakistan Pharmaceutical Sales Index) 	25
+3	Source of Raw Material 	  
+ 	a. API 	8
+ 	b. Excipients 	7
+4	International Testing 	 
+ 	Reports of WHO Accredited International Labs performed on the product through any Procuring Agency 	15
+5	Export of Quoted Product 	 
+ 	Attach documentary support, i.e., bill of lading or letter of credit or any other document instead of just giving details on company’s letterhead only. 	20
+6	Bio Equivalence Study of Quoted Product 	 
+ 	Availability of Bio Equivalence Study  	5
+Grand Total 	100
+Qualifying Marks 	50
+
+
+
+
+
+
+Exhibit 4.2 : Technical Evaluation Criteria for Manufacturers-Procurement of Medicines Year 2017-18
+Description	Category	Total Marks
+(A) General Parameters	1. Source of API of Quoted Item	10
+	2. Bio Equivalence/Bio-Similarity Study of Quoted Product	10
+	3. Experience of the quoted product since January 2016-April 2017.	15
+	4. Financial capacity of the bidder (annual turnover)	20
+	SUBTOTAL	55
+(B) Quality Parameters	I. Valid ISO 9001/QMS Certification.	2
+	II. Availability of product at major chain pharmacies having minimum 20 branches within Punjab.	5
+	III. Valid calibration summary of Manufacturing and Testing equipment used for quoted item from third party.	3
+	IV. Valid Validation of equipment used for manufacturing and testing of quoted item.	2
+	V. HVAC System dedicated for section of quoted item (where applicable).	3
+	VI. R.O Water/De-ionised water plant with the minimum capacity of 500 litres.	4
+	VII. Presence of separate Q/A department.	3
+	VIII. No DTL Sample declared substandard of the quoted Item.	3
+	IX. Waste Water Treatment Plant.	3
+	X. Drug recall Procedure (SOP).	3
+	XI. Number of Functional Stability Chambers.	5
+	XII. Real time study of the quoted item. Duly signed by Q.C In charge (as per Guidelines of ICH/WHO/DRAP).	2
+	XIII. Retained Sample Stability study of the quoted item. Duly signed by Q.C in charge (as per guidelines of ICH/WHO/DRAP). 	3
+	XIV. Incineration of expired item SOP and incineration record of expired items for the period of June-2015-April 2017.	4
+	SUBTOTAL	45
+GRAND TOTAL	100
+Qualifying Marks(A+B) 	60
+
