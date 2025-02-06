@@ -164,6 +164,35 @@ class SpeechManager {
                 iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
             });
 
+            // Add audio transceiver with specific codec preferences
+            const audioTransceiver = this.pc.addTransceiver('audio', {
+                direction: 'sendrecv',
+                sendEncodings: [
+                    {
+                        maxBitrate: 128000,
+                        dtx: true
+                    }
+                ]
+            });
+
+            // Set codec preferences for audio
+            const audioCapabilities = [
+                { mimeType: 'audio/opus', clockRate: 48000, channels: 2 },
+                { mimeType: 'audio/PCMA', clockRate: 8000, channels: 1 },
+                { mimeType: 'audio/PCMU', clockRate: 8000, channels: 1 }
+            ];
+            
+            const codecs = audioCapabilities.map(cap => ({
+                mimeType: cap.mimeType,
+                clockRate: cap.clockRate,
+                channels: cap.channels
+            }));
+            
+            audioTransceiver.setCodecPreferences(codecs);
+
+            // Add video transceiver (required by OpenAI's API)
+            this.pc.addTransceiver('video', { direction: 'sendrecv' });
+            
             // Set up connection state monitoring first
             this.pc.onconnectionstatechange = () => {
                 const state = this.pc.connectionState;
