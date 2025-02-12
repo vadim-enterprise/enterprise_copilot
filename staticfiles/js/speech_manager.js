@@ -175,21 +175,6 @@ class SpeechManager {
                 ]
             });
 
-            // Set codec preferences for audio
-            const audioCapabilities = [
-                { mimeType: 'audio/opus', clockRate: 48000, channels: 2 },
-                { mimeType: 'audio/PCMA', clockRate: 8000, channels: 1 },
-                { mimeType: 'audio/PCMU', clockRate: 8000, channels: 1 }
-            ];
-            
-            const codecs = audioCapabilities.map(cap => ({
-                mimeType: cap.mimeType,
-                clockRate: cap.clockRate,
-                channels: cap.channels
-            }));
-            
-            audioTransceiver.setCodecPreferences(codecs);
-
             // Add video transceiver (required by OpenAI's API)
             this.pc.addTransceiver('video', { direction: 'sendrecv' });
             

@@ -62,7 +62,13 @@ function displaySearchResults(results) {
         const resultElement = document.createElement('div');
         resultElement.className = 'search-result-item';
         resultElement.innerHTML = `
-            <div class="search-result-title">${result.title}</div>
+            <button class="add-to-kb" onclick="addToKnowledgeBase('${encodeURIComponent(JSON.stringify(result))}')">
+                <span class="kb-icon">📚</span>
+                Add to KB
+            </button>
+            <div class="search-result-title">
+                <a href="${result.link}" target="_blank">${result.title}</a>
+            </div>
             <div class="search-result-description">${result.snippet}</div>
         `;
         
@@ -77,13 +83,16 @@ function displaySearchResults(results) {
 
 async function addToKnowledgeBase(result) {
     try {
-        const response = await fetch('/add-website-to-knowledge-base/', {
+        const response = await fetch('http://127.0.0.1:8001/api/rag/add-to-kb', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
             },
-            body: JSON.stringify({ result })
+            body: JSON.stringify({
+                title: result.title,
+                content: result.snippet,
+                url: result.link
+            })
         });
 
         const data = await response.json();
@@ -98,6 +107,7 @@ async function addToKnowledgeBase(result) {
         
     } catch (error) {
         console.error('Error adding to knowledge base:', error);
+        showNotification('Failed to add to knowledge base', 'error');
     }
 }
 
@@ -105,7 +115,14 @@ class WebSearch {
     constructor() {
         this.searchInput = document.getElementById('webSearchInput');
         this.searchButton = document.getElementById('webSearchButton');
-        this.resultsContainer = document.getElementById('searchResults');
+        // Create results container if it doesn't exist
+        this.resultsContainer = document.querySelector('.search-results') || (() => {
+            const container = document.createElement('div');
+            container.className = 'search-results';
+            document.querySelector('.search-container').appendChild(container);
+            return container;
+        })();
+        
         this.fastApiUrl = 'http://127.0.0.1:8001';
         this.serverAvailable = false;
         
@@ -187,7 +204,6 @@ class WebSearch {
 
             console.log('Performing web search with query:', query);
 
-            // Use the new websearch endpoint
             const response = await fetch(`${this.fastApiUrl}/api/websearch/search`, {
                 method: 'POST',
                 headers: {
@@ -196,20 +212,36 @@ class WebSearch {
                 body: JSON.stringify({ query })
             });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
-            }
-
             const data = await response.json();
-            console.log('Web search results:', data);
-
-            if (data.status === 'error') {
-                throw new Error(data.message || 'Failed to perform search');
-            }
             
-            // Display results
-            this.displayResults(data.results);
+            // Clear previous results
+            this.resultsContainer.innerHTML = '';
+            
+            if (data.status === 'success' && data.results && data.results.length > 0) {
+                const resultsHeader = document.createElement('h2');
+                resultsHeader.className = 'results-header';
+                resultsHeader.textContent = `Search Results for "${query}"`;
+                this.resultsContainer.appendChild(resultsHeader);
+                
+                data.results.forEach(result => {
+                    const resultElement = document.createElement('div');
+                    resultElement.className = 'search-result-item';
+                    resultElement.innerHTML = `
+                        <button class="add-to-kb" onclick="addToKnowledgeBase('${encodeURIComponent(JSON.stringify(result))}')">
+                            <span class="kb-icon">📚</span>
+                            Add to KB
+                        </button>
+                        <div class="search-result-title">
+                            <a href="${result.link}" target="_blank">${result.title}</a>
+                        </div>
+                        <div class="search-result-description">${result.snippet}</div>
+                    `;
+                    this.resultsContainer.appendChild(resultElement);
+                });
+            } else {
+                this.resultsContainer.innerHTML = '<div class="no-results">No results found</div>';
+            }
+            this.resultsContainer.classList.add('active');
             
             // Make results visible with animation
             setTimeout(() => {
@@ -219,6 +251,8 @@ class WebSearch {
         } catch (error) {
             console.error('Search error:', error);
             this.showError(error.message || 'Failed to perform search. Please try again later.');
+            this.resultsContainer.innerHTML = '<div class="error-message">Error performing search</div>';
+            this.resultsContainer.classList.add('active');
         } finally {
             // Hide loading states
             this.searchButton.classList.remove('loading');
@@ -249,45 +283,6 @@ class WebSearch {
         }
     }
 
-    displayResults(results) {
-        if (!results || results.length === 0) {
-            this.resultsContainer.innerHTML = `
-                <div class="no-results">
-                    <p>No results found. Try different keywords.</p>
-                </div>
-            `;
-            return;
-        }
-
-        // Create results HTML with more detailed information
-        const resultsHTML = results.map(result => `
-            <div class="result-card">
-                <h3>${result.title}</h3>
-                <p>${result.description}</p>
-                <div class="result-actions">
-                    <a href="${result.url}" target="_blank" class="result-link">
-                        <span class="link-icon">🔗</span>
-                        Learn more
-                    </a>
-                    <button class="add-to-kb" onclick="addToKnowledgeBase('${encodeURIComponent(JSON.stringify(result))}')">
-                        <span class="kb-icon">📚</span>
-                        Add to Knowledge Base
-                    </button>
-                </div>
-            </div>
-        `).join('');
-
-        // Set results with fade-in animation
-        this.resultsContainer.classList.remove('visible');
-        this.resultsContainer.innerHTML = resultsHTML;
-        
-        // Trigger reflow to ensure animation plays
-        void this.resultsContainer.offsetWidth;
-        
-        // Show results with animation
-        this.resultsContainer.classList.add('visible');
-    }
-
     showError(message) {
         this.resultsContainer.innerHTML = `
             <div class="error-message">
@@ -295,31 +290,6 @@ class WebSearch {
                 <p>Please try again later.</p>
             </div>
         `;
-    }
-}
-
-// Helper function to add result to knowledge base
-async function addToKnowledgeBase(resultData) {
-    try {
-        const result = JSON.parse(decodeURIComponent(resultData));
-        const response = await fetch('/api/update-knowledge/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify(result)
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        showNotification(data.message, data.status);
-    } catch (error) {
-        console.error('Error adding to knowledge base:', error);
-        showNotification('Failed to add to knowledge base', 'error');
     }
 }
 

@@ -70,21 +70,25 @@ class HybridRAG:
 
             if use_llama:
                 combined_prompt = f"{system_prompt}\n\nUser: {user_prompt}\nAssistant:"
-                return get_llama_response(combined_prompt)
+                return self.get_llama_response(combined_prompt)
             else:
+                messages = [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ]
+                
                 response = self.openai_client.chat.completions.create(
                     model=self.model_name,
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt}
-                    ],
-                    temperature=self.temperature
+                    messages=messages,
+                    temperature=self.temperature,
+                    max_tokens=500
                 )
+                
                 return response.choices[0].message.content.strip()
-
+            
         except Exception as e:
             logger.error(f"Error generating response: {str(e)}")
-            return f"Error generating response: {str(e)}"
+            raise Exception(f"Error generating response: {str(e)}")
 
     def _initialize_model(self):
         """Initialize the chosen model"""
@@ -127,6 +131,17 @@ class HybridRAG:
                 self.openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
                 self.llama_model = None
                 self.llama_tokenizer = None
+
+    def get_llama_response(self, prompt: str) -> str:
+        """Generate response using LLaMA model"""
+        try:
+            inputs = self.llama_tokenizer(prompt, return_tensors="pt").to(self.llama_model.device)
+            with torch.no_grad():
+                outputs = self.llama_model.generate(**inputs, max_length=500, temperature=0.7)
+            return self.llama_tokenizer.decode(outputs[0], skip_special_tokens=True)
+        except Exception as e:
+            logger.error(f"Error generating LLaMA response: {str(e)}")
+            raise Exception(f"LLaMA generation error: {str(e)}")
 
     def _initialize_empty_collection(self, reset=False):
         """Initialize ChromaDB collection"""

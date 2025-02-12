@@ -1,0 +1,745 @@
+Summarize the answer length of the voice bot to the 50 words max. Do not repeat long product names multiple times and instead use words such as "this fund", etc. 
+when talking about a fund that already was mentioned earlier. If a person asks you about some numbers or statistics, make initial phrase to be like "let me take a look"
+or "let me look it up for you". Do not repeat Goldman Sachs Growth Strategy Portfolio multiple times. After the first time, refer to this fund as "this fund", when mentioning
+in the conversation. 
+
+Start the conversation with a small talk asking about how you are doing.
+
+Before you invest, you may want to review the Goldman Sachs Growth Strategy Portfolio (the “Fund”) Prospectus, which contains more information
+about the Fund and its risks. You can find the Fund’s Prospectus, reports to shareholders and other information about the Fund online at
+www.gsamfunds.com/mutualfunds. You can also get this information at no cost by calling 800-621-2550 or by sending an e-mail request to
+gs-funds-document-requests@gs.com. The Fund’s Prospectus and Statement of Additional Information (“SAI”), both dated April 29, 2024, are
+incorporated by reference into this Summary Prospectus.
+INVESTMENT OBJECTIVE
+The Goldman Sachs Growth Strategy Portfolio (the Fund) seeks long-term capital appreciation and, secondarily, current income.
+FEES AND EXPENSES OF THE FUND
+This table describes the fees and expenses that you may pay if you buy, hold and sell shares of the Fund. You may pay other fees, such as brokerage
+commissions and other fees to financial intermediaries, which are not reflected in the table and Example below. You may qualify for sales
+charge discounts on purchases of Class A Shares if you invest at least $50,000 in Goldman Sachs Funds. More information about these and other
+discounts is available from your financial professional and in “Shareholder Guide—Common Questions Applicable to the Purchase of Class A
+Shares” beginning on page 71 and in Appendix C—Additional Information About Sales Charge Variations, Waivers and Discounts beginning on page
+129 of the Prospectus and “Other Information Regarding Maximum Sales Charge, Purchases, Redemptions, Exchanges and Dividends” beginning on
+page B-175 of the Fund’s Statement of Additional Information (“SAI”).
+
+EXPENSE EXAMPLE
+This Example is intended to help you compare the cost of investing in
+the Fund with the cost of investing in other mutual funds.
+The Example assumes that you invest $10,000 in Class A, Class C,
+Institutional, Service, Investor, Class R and/or Class R6 Shares of the
+Fund for the time periods indicated and then redeem all of your Class A,
+Class C, Institutional, Service, Investor, Class R and/or Class R6 Shares
+at the end of those periods. The Example also assumes that your
+investment has a 5% return each year and that the Fund’s operating
+expenses remain the same (except that the Example incorporates any
+applicable fee waiver and/or expense limitation arrangements for only
+the first year). Although your actual costs may be higher or lower, based
+on these assumptions your costs would be:
+1 Year 3 Years 5 Years 10 Years
+Class A Shares $643 $849 $1,073 $1,714
+Class C Shares $274 $549 $949 $2,069
+Institutional Shares $61 $203 $357 $806
+Service Shares $112 $360 $628 $1,393
+Investor Shares $73 $238 $417 $938
+Class R Shares $123 $395 $687 $1,518
+Class R6 Shares $60 $200 $352 $794
+Class C Shares –
+Assuming no
+redemption $174 $549 $949 $2,069
+PORTFOLIO TURNOVER
+The Fund does not pay transaction costs when it buys and sells shares of
+underlying mutual funds. However, the Fund and each Underlying Fund
+pays transaction costs when it buys and sells other securities or
+instruments (i.e., “turns over” its portfolio). A high rate of portfolio
+turnover may result in increased transaction costs, including brokerage
+commissions, which must be borne by the Underlying Fund and its
+shareholders, including the Fund, and is also likely to result in higher
+short-term capital gains for taxable shareholders. These costs are not
+reflected in the annual fund operating expenses or in the expense
+example above, but are reflected in the Fund’s performance. The Fund’s
+portfolio turnover rate for the fiscal year ended December 31, 2023 was
+67% of the average value of its portfolio.
+PRINCIPAL STRATEGY
+The Fund seeks to achieve its investment objective by investing in a
+combination of underlying funds that currently exist or that may become
+available for investment in the future for which Goldman Sachs Asset
+Management, L.P. (“GSAM” or the “Investment Adviser”) or an
+affiliate now or in the future acts as investment adviser or principal
+underwriter without considering or canvassing the universe of
+unaffiliated funds available, and may also invest in unaffiliated
+exchange-traded funds (“ETFs”) (collectively, the “Underlying Funds”).
+Some of the Underlying Funds invest primarily in fixed income or
+money market instruments (the “Underlying Fixed Income Funds”),
+some of the Underlying Funds invest primarily in equity securities (the
+“Underlying Equity Funds”), and other Underlying Funds invest
+dynamically across equity, fixed income, commodity and other markets
+through a managed-volatility or trend-following approach (the
+“Underlying Dynamic Funds”).
+Under normal conditions, the Fund seeks to achieve its investment
+objective by investing approximately 75% (which allocation could be
+increased by 25% or decreased by 30%) of its assets in Underlying
+Equity Funds, approximately 15% (which allocation could be increased
+by 5% or decreased by 15%) of its assets in the Underlying Dynamic
+Funds, and approximately 10% (which allocation could be increased by
+30% or decreased by 10%) of its assets in the Underlying Fixed Income
+Funds. The allocation will be measured at the time of rebalance.
+Generally, the Investment Adviser rebalances the Fund approximately
+monthly, but the Fund can be rebalanced more or less frequently at the
+discretion of the Investment Adviser based on the market environment
+and its macro views. Unless otherwise stated herein, the Fund’s
+investment in any of the Underlying Funds may exceed 25% of its
+assets. The Investment Adviser expects that the Fund will invest a
+relatively significant percentage of its equity allocation in a
+combination of the Goldman Sachs Large Cap Growth Insights Fund,
+Goldman Sachs Large Cap Value Insights Fund, Small Cap Equity
+Insights Fund, Goldman Sachs Emerging Markets Equity Insights,
+Goldman Sachs Global Real Estate Securities, Goldman Sachs Global
+Infrastructure, Goldman Sachs International Small Cap Insights and
+Goldman Sachs International Equity Insights Funds, Goldman Sachs
+Energy Infrastructure Fund, Goldman Sachs MarketBeta® U.S. Equity
+ETF, Goldman Sachs ActiveBeta® U.S. Large Cap Equity ETF,
+Goldman Sachs MarketBeta® International Equity ETF, Goldman Sachs
+ActiveBeta® International Equity ETF, Goldman Sachs MarketBeta®
+Emerging Markets Equity ETF, and Goldman Sachs ActiveBeta®
+Emerging Markets Equity ETF; a relatively significant percentage of its
+fixed income allocation in a combination of the Goldman Sachs High
+Yield Floating Rate, Goldman Sachs Emerging Markets Debt, Goldman
+Sachs Access Investment Grade Corporate Bond ETF, Goldman Sachs
+High Yield and Goldman Sachs Financial Square Government Funds;
+and a relatively significant percentage of its dynamic allocation in the
+Goldman Sachs Managed Futures Strategy Fund.
+The Fund may also use derivatives (including (i) futures contracts,
+including futures based on equity or fixed income indices, and interest
+rate futures; (ii) options, including long and short positions in call
+options and put options on indices, individual securities or currencies
+and options on futures contracts; and (iii) currency forwards, and
+non-deliverable forwards) to gain exposure to securities in which the
+Underlying Funds invest. The Fund may use derivatives for both
+hedging and non-hedging purposes.
+The Fund’s blended benchmark is the Growth Strategy Composite
+Index, as discussed further under “Performance.”
+THE PARTICULAR UNDERLYING FUNDS IN WHICH THE FUND
+MAY INVEST, THE EQUITY/FIXED INCOME TARGETS AND
+RANGES AND INVESTMENTS IN EACH UNDERLYING FUND
+MAY BE CHANGED FROM TIME TO TIME WITHOUT
+SHAREHOLDER APPROVAL OR NOTICE.
+PRINCIPAL RISKS OF THE FUND
+Loss of money is a risk of investing in the Fund. An investment in
+the Fund is not a bank deposit and is not insured or guaranteed by
+the Federal Deposit Insurance Corporation (“FDIC”) or any
+government agency. The Fund should not be relied upon as a
+complete investment program. Stated allocations may be subject to
+change. There can be no assurance that the Fund will achieve its
+investment objective. Investments in the Fund involve substantial
+risks which prospective investors should consider carefully before
+investing. The Fund’s principal risks are presented below in
+alphabetical order, and not in the order of importance or
+potential exposure.
+
+Asset Allocation Risk. The Fund’s allocations to the various underlying
+asset classes may cause the Fund to underperform other funds with a
+similar investment objective.
+Derivatives Risk. The Fund’s use of futures, swaps, options, forward
+contracts and other derivative instruments may result in losses. These
+instruments, which may pose risks in addition to and greater than those
+associated with investing directly in securities, currencies or other
+instruments, may be illiquid or less liquid, volatile, difficult to price and
+leveraged so that small changes in the value of the underlying
+instruments may produce disproportionate losses to the Fund. Certain
+derivatives are also subject to counterparty risk, which is the risk that
+the other party in the transaction will not fulfill its contractual
+obligations. The use of derivatives is a highly specialized activity that
+involves investment techniques and risks different from those associated
+with investments in more traditional securities and instruments.
+Expenses Risk. By investing in the Underlying Funds indirectly through
+the Fund, the investor will incur not only a proportionate share of the
+expenses of the Underlying Funds held by the Fund (including operating
+costs and investment management fees), but also the expenses of
+the Fund.
+Investing in the Underlying Funds. The investments of the Fund may
+be concentrated in one or more Underlying Funds (including ETFs and
+other registered investment companies) subject to limitations and/or
+conditions prescribed by the Investment Company Act of 1940, as
+amended (the “Investment Company Act”), or rules, regulations or
+exemptive relief thereunder. The Fund’s investment performance is
+directly related to the investment performance of the Underlying Funds
+it holds. The Fund is subject to the risk factors associated with the
+investments of the Underlying Funds in direct proportion to the amount
+of assets allocated to each. If the Fund has a relative concentration of its
+portfolio in a single Underlying Fund, it may be more susceptible to
+adverse developments affecting that Underlying Fund and may be more
+susceptible to losses because of these developments.
+Investments in Affiliated Underlying Funds. The Investment Adviser
+will have the authority to select and substitute Underlying Funds. The
+Investment Adviser and/or its affiliates are compensated by the Fund
+and by certain Underlying Funds for advisory and/or principal
+underwriting services provided. The Investment Adviser is subject to
+conflicts of interest in allocating Fund assets among certain Underlying
+Funds both because the fees payable to it and/or its affiliates by the
+Underlying Funds differ and because the Investment Adviser and its
+affiliates are also responsible for managing the Underlying Funds. The
+portfolio managers may also be subject to conflicts of interest in
+allocating Fund assets among the various Underlying Funds because the
+Fund’s portfolio management team may also manage some of the
+Underlying Funds. The Trustees and officers of the Goldman Sachs
+Trust may also have conflicting interests in fulfilling their fiduciary
+duties to both the Fund and the Underlying Funds for which GSAM or
+its affiliates now or in the future serve as investment adviser or principal
+underwriter. In addition, the Investment Adviser’s authority to allocate
+investments among affiliated and unaffiliated investment companies
+creates conflicts of interest. For example, investing in affiliated
+investment companies could cause the Fund to incur higher fees and
+may cause the Investment Adviser and/or its affiliates to receive greater
+compensation, increase assets under management or support particular
+investment strategies or affiliated investment companies. In selecting
+Underlying Funds, the Investment Adviser generally expects to select
+affiliated investment companies without considering or canvassing the
+universe of unaffiliated investment companies available even though
+there may (or may not) be one or more unaffiliated investment
+companies that may be a more appropriate addition to the Fund, that
+investors may regard as a more attractive investment for the Fund, or
+that may have higher returns. To the extent that an investment in an
+affiliated investment company is not available, including as the result of
+capacity constraints, only then will the Investment Adviser consider
+unaffiliated investment companies.
+Large Shareholder Transactions Risk. The Fund may experience
+adverse effects when certain large shareholders purchase or redeem
+large amounts of shares of the Fund. Such large shareholder
+redemptions, which may occur rapidly or unexpectedly, may cause the
+Fund to sell Fund securities at times when it would not otherwise do so,
+which may negatively impact the Fund’s net asset value (“NAV”) and
+liquidity. Similarly, large purchases of Fund shares may adversely affect
+the Fund’s performance to the extent that the Fund is delayed in
+investing new cash or otherwise maintains a larger cash position than it
+ordinarily would. These transactions may also accelerate the realization
+of taxable income to shareholders if such sales of investments resulted
+in gains, and may also increase transaction costs. In addition, a large
+redemption could result in the Fund’s current expenses being allocated
+over a smaller asset base, leading to an increase in the Fund’s
+expense ratio.
+Temporary Investments. Although the Fund normally seeks to remain
+substantially invested in the Underlying Funds, the Fund may invest a
+portion of its assets in high-quality, short-term debt obligations to
+maintain liquidity, to meet shareholder redemptions and for other
+short-term cash needs. For temporary defensive purposes during
+abnormal market or economic conditions, the Fund may invest without
+limitation in short-term obligations. When the Fund’s assets are invested
+in such investments, the Fund may not be achieving its
+investment objective.
+PRINCIPAL RISKS OF THE UNDERLYING FUNDS
+The target and actual asset allocation percentages, the selection of
+Underlying Funds and the investments in the Underlying Funds are
+subject to change. Such changes may cause the Fund to be subject to
+additional or different risks than the risks listed below.
+The investment programs of some of the Underlying Funds are
+speculative, entail substantial risks and include alternative
+investment techniques not employed by traditional mutual funds.
+The investment techniques of some of the Underlying Funds (if they
+do not perform as designed) may increase the volatility of
+performance and the risk of investment loss, including the loss of
+the entire amount that is invested, and there can be no assurance
+that the investment objectives of those Underlying Funds will be
+achieved. Moreover, certain investment techniques which certain
+Underlying Funds may employ in their investment programs can
+substantially increase the adverse impact to which those Underlying
+Funds’ investments may be subject. There is no assurance that the
+investment processes of those Underlying Funds will be successful,
+that the techniques utilized therein will be implemented successfully
+or that they are adequate for their intended uses, or that the
+discretionary element of the investment processes of those
+Underlying Funds will be exercised in a manner that is successful or
+that is not adverse to the Fund.
+Absence of Regulation Risk. Certain of the Underlying Funds engage
+in over-the-counter (“OTC”) transactions, which trade in a dealer
+network, rather than on an exchange. In general, there is less
+governmental regulation and supervision of transactions in the OTC
+markets than of transactions entered into on organized exchanges.
+Call/Prepayment Risk. An issuer could exercise its right to pay
+principal on an obligation held by an Underlying Fund (such as a
+mortgage-backed security) earlier than expected. This may happen when
+there is a decline in interest rates, when credit spreads change, or when
+an issuer’s credit quality improves. Under these circumstances, the
+Underlying Fund may be unable to recoup all of its initial investment
+and will also suffer from having to reinvest in lower-yielding securities.
+Cash Transactions Risk. Unlike some ETFs, certain exchange-traded
+Underlying Funds (“Underlying ETFs”) expect to effect their creations
+and redemptions partially for cash, rather than primarily for in-kind
+securities. As such, investments in Underlying ETF Shares (“ETF
+Shares”) may be less tax-efficient than an investment in a conventional
+ETF which generally are able to make in-kind redemptions and avoid
+realizing gains in connection with transactions designed to raise cash to
+meet redemption requests.
+Commodity Sector Risk. Exposure to the commodities markets may
+subject certain of the Underlying Funds to greater volatility than
+investments in more traditional securities. The value of
+commodity-linked investments may be affected by changes in overall
+market movements, commodity index volatility, changes in interest
+rates, or factors affecting a particular industry or commodity, such as
+drought, floods, weather, livestock disease, embargoes, tariffs and
+international economic, political and regulatory developments. The
+prices of energy, industrial metals, precious metals, agriculture and
+livestock sector commodities may fluctuate widely due to factors such
+as changes in value, supply and demand and governmental regulatory
+policies. The commodity-linked investments in which certain of the
+Underlying Funds may enter into may involve companies in the
+financial services sector, and events affecting the financial services
+sector may cause the commodity’s, and therefore the Underlying Fund’s,
+share value to fluctuate.
+Counterparty Risk. Many of the protections afforded to cleared
+transactions, such as the security afforded by transacting through a
+clearing house, might not be available in connection with OTC
+transactions. Therefore, in those instances in which an Underlying Fund
+enters into uncleared OTC transactions, the Underlying Fund will be
+subject to the risk that its direct counterparty will not perform its
+obligations under the transactions and that the Underlying Fund will
+sustain losses.
+Credit/Default Risk. An issuer or guarantor of fixed income securities
+or instruments held by an Underlying Fund (which may have low credit
+ratings) may default on its obligation to pay interest and repay principal
+or default on any other obligation. Additionally, the credit quality of
+securities may deteriorate rapidly, which may impair an Underlying
+Fund’s liquidity and cause significant deterioration in NAV. These risks
+are heightened in market environments where interest rates are rising as
+well as in connection with the Underlying Fund’s investments in
+non-investment grade fixed income securities.
+Depositary Receipts Risk. Foreign securities may trade in the form of
+depositary receipts, which include American Depositary Receipts
+(“ADRs”) and Global Depositary Receipts (“GDRs”) (collectively
+“Depositary Receipts”). To the extent the Underlying Funds acquire
+Depositary Receipts through banks which do not have a contractual
+relationship with the foreign issuer of the security underlying the
+Depositary Receipts to issue and service such unsponsored Depositary
+Receipts, there may be an increased possibility that the Underlying
+Funds would not become aware of and be able to respond to corporate
+actions such as stock splits or rights offerings involving the foreign
+issuer in a timely manner. In addition, the lack of information may
+result in inefficiencies in the valuation of such instruments. Investment
+in Depositary Receipts does not eliminate all the risks inherent in
+investing in securities of non-U.S. issuers. The market value of
+Depositary Receipts is dependent upon the market value of the
+underlying securities and fluctuations in the relative value of the
+currencies in which the Depositary Receipts and the underlying
+securities are quoted. The issuers of Depositary Receipts may
+discontinue issuing new Depositary Receipts and withdraw existing
+Depositary Receipts at any time, which may result in costs and delays in
+the distribution of the underlying assets to the Fund and may negatively
+impact the Fund’s performance.
+Derivatives Risk. An Underlying Fund’s use of forwards, options,
+futures, swaps, options on swaps, structured securities and other
+derivative instruments may result in losses. These instruments, which
+may pose risks in addition to and greater than those associated with
+investing directly in securities, currencies or other instruments, may be
+illiquid or less liquid, volatile, difficult to price and leveraged so that
+small changes in the value of the underlying instruments may produce
+disproportionate losses to an Underlying Fund. Certain derivatives are
+also subject to counterparty risk, which is the risk that the other party in
+the transaction will not fulfill its contractual obligations. The use of
+derivatives is a highly specialized activity that involves investment
+techniques and risks different from those associated with investments in
+more traditional securities and instruments.
+Dividend-Paying Investments Risk. An Underlying Fund’s investments
+in dividend-paying securities could cause the Underlying Fund to
+underperform other funds. Securities that pay dividends, as a group, can
+fall out of favor with the market, causing such securities to
+underperform securities that do not pay dividends. Depending upon
+market conditions and political and legislative responses to such
+conditions, dividend-paying securities that meet an Underlying Fund’s
+investment criteria may not be widely available and/or may be highly
+concentrated in only a few market sectors. In addition, issuers that have
+paid regular dividends or distributions to shareholders may not continue
+to do so at the same level or at all in the future. This may limit the
+ability of an Underlying Fund to produce current income.
+Expenses Risk. Because the Underlying Funds may invest in pooled
+investment vehicles (including investment companies and ETFs,
+partnerships and real estate investment trusts (REITs)), the investor
+will incur indirectly through the Fund a proportionate share of the
+expenses of the other pooled investment vehicles, partnerships and
+REITs held by the Underlying Fund (including operating costs and
+investment management fees), in addition to the expenses of the
+Underlying Fund.
+Foreign and Emerging Countries Risk. Foreign securities may be
+subject to risk of loss because of more or less foreign government
+regulation; less public information; less stringent investor protections;
+less stringent accounting, corporate governance, financial reporting and
+disclosure standards; and less economic, political and social stability in
+the countries in which the Underlying Fund invests. The imposition of
+sanctions, exchange controls, confiscations, trade restrictions (including
+tariffs) and other government restrictions by the United States and other
+governments, or from problems in share registration, settlement or
+custody, may also result in losses. The type and severity of sanctions
+and other similar measures, including counter sanctions and other
+retaliatory actions, that may be imposed could vary broadly in scope,
+and their impact is impossible to predict. For example, the imposition of
+sanctions and other similar measures could, among other things, cause a
+decline in the value and/or liquidity of securities issued by the
+sanctioned country or companies located in or economically tied to the
+sanctioned country and increase market volatility and disruption in the
+sanctioned country and throughout the world. Sanctions and other
+similar measures could limit or prevent the Fund from buying and
+selling securities (in the sanctioned country and other markets),
+significantly delay or prevent the settlement of securities transactions,
+and significantly impact the Fund’s liquidity and performance. Foreign
+risk also involves the risk of negative foreign currency rate fluctuations,
+
+which may cause the value of securities denominated in such foreign
+currency (or other instruments through which the Underlying Fund has
+exposure to foreign currencies) to decline in value. Currency exchange
+rates may fluctuate significantly over short periods of time. These risks
+may be more pronounced in connection with an Underlying Fund’s
+investments in securities of issuers located in, or otherwise
+economically tied to, emerging markets.
+Interest Rate Risk. When interest rates increase, fixed income securities
+or instruments held by an Underlying Fund will generally decline in
+value. Long-term fixed income securities or instruments will normally
+have more price volatility because of this risk than short-term fixed
+income securities or instruments. Changing interest rates may have
+unpredictable effects on the markets, may result in heightened market
+volatility and may detract from an Underlying Fund’s performance. In
+addition, changes in monetary policy may exacerbate the risks
+associated with changing interest rates. Fluctuations in interest rates
+may also affect the liquidity of fixed income securities and instruments
+held by an Underlying Fund.
+Investment Style Risk. Different investment styles (e.g., “growth”,
+“value” or “quantitative”) tend to shift in and out of favor depending
+upon market and economic conditions and investor sentiment. An
+Underlying Fund may outperform or underperform other funds that
+invest in similar asset classes but employ different investment styles.
+Large Shareholder Transactions Risk. An Underlying Fund may
+experience adverse effects when certain large shareholders purchase or
+redeem large amounts of shares of the Underlying Fund. Such large
+shareholder redemptions, which may occur rapidly or unexpectedly, may
+cause an Underlying Fund to sell portfolio securities at times when it
+would not otherwise do so, which may negatively impact the Underlying
+Fund’s NAV and liquidity. Similarly, large purchases of Underlying
+Fund shares may adversely affect the Underlying Fund’s performance to
+the extent that the Underlying Fund is delayed in investing new cash or
+otherwise maintains a larger cash position than it ordinarily would.
+These transactions may also accelerate the realization of taxable income
+to shareholders if such sales of investments resulted in gains, and may
+also increase transaction costs. In addition, a large redemption could
+result in an Underlying Fund’s current expenses being allocated over a
+smaller asset base, leading to an increase in the Underlying Fund’s
+expense ratio.
+Leverage Risk. Borrowing and the use of derivatives may result in
+leverage and may make an Underlying Fund more volatile. The use of
+leverage may cause an Underlying Fund to liquidate portfolio positions
+to satisfy its obligations or to meet asset segregation requirements when
+it may not be advantageous to do so. The use of leverage by an
+Underlying Fund can substantially increase the adverse impact to which
+the Underlying Fund may be subject.
+Liquidity Risk. An Underlying Fund may make investments that are
+illiquid or that may become less liquid in response to market
+developments or adverse investor perceptions. Illiquid investments may
+be more difficult to value. Liquidity risk may also refer to the risk that
+an Underlying Fund will not be able to pay redemption proceeds within
+the allowable time period because of unusual market conditions,
+declining prices of the securities sold, an unusually high volume of
+redemption requests, or other reasons. To meet redemption requests, an
+Underlying Fund may be forced to sell securities at an unfavorable time
+and/or under unfavorable conditions. Liquidity risk may be the result of,
+among other things, the reduced number and capacity of traditional
+market participants to make a market in fixed income securities or the
+lack of an active market. The potential for liquidity risk may be
+magnified by a rising interest rate environment or other circumstances
+where investor redemptions from fixed income funds may be higher
+than normal, potentially causing increased supply in the market due to
+selling activity. These risks may be more pronounced in connection with
+an Underlying Fund’s investments in securities of issuers located in
+emerging market countries. Redemptions by large shareholders may
+have a negative impact on an Underlying Fund’s liquidity.
+Loan-Related Investments Risk. In addition to risks generally
+associated with debt investments (e.g., interest rate risk and default
+risk), loan-related investments such as loan participations and
+assignments are subject to other risks. Although a loan obligation may
+be fully collateralized at the time of acquisition, the collateral may
+decline in value, be or become illiquid or less liquid, or lose all or
+substantially all of its value subsequent to investment. Many loan
+investments are subject to legal or contractual restrictions on resale and
+certain loan investments may be or become illiquid or less liquid and
+more difficult to value, particularly in the event of a downgrade of the
+loan or the borrower. There is less readily available, reliable information
+about most loan investments than is the case for many other types of
+securities. Substantial increases in interest rates may cause an increase
+in loan obligation defaults. With respect to loan participations, an
+Underlying Fund may not always have direct recourse against a
+borrower if the borrower fails to pay scheduled principal and/or interest;
+may be subject to greater delays, expenses and risks than if the
+Underlying Fund had purchased a direct obligation of the borrower; and
+may be regarded as the creditor of the agent lender (rather than the
+borrower), subjecting the Underlying Fund to the creditworthiness of
+that lender as well. Investors in loans, such as an Underlying Fund, may
+not be entitled to rely on the anti-fraud protections of the federal
+securities laws, although they may be entitled to certain contractual
+remedies. The market for loan obligations may be subject to irregular
+trading activity, wide bid/ask spreads and extended trade settlement
+periods. Because transactions in many loans are subject to extended
+trade settlement periods, an Underlying Fund may not receive the
+proceeds from the sale of a loan for a period after the sale. As a result,
+sale proceeds related to the sale of loans may not be available to make
+additional investments or to meet an Underlying Fund’s redemption
+obligations for a period after the sale of the loans, and, as a result, the
+Underlying Fund may have to sell other investments or engage in
+borrowing transactions, such as borrowing from its credit facility, if
+necessary to raise cash to meet its obligations. During periods of
+heightened redemption activity or distressed market conditions, the
+Underlying Fund may seek to obtain expedited trade settlement, which
+will generally incur additional costs (although expedited trade
+settlement will not always be available).
+Senior loans hold the most senior position in the capital structure of a
+business entity, and are typically secured with specific collateral, but are
+nevertheless usually rated below investment grade. Because second lien
+loans are subordinated or unsecured and thus lower in priority of
+payment to senior loans, they are subject to the additional risk that the
+cash flow of the borrower and property securing the loan or debt, if any,
+may be insufficient to meet scheduled payments after giving effect to
+the senior secured obligations of the borrower. Second lien loans
+generally have greater price volatility than senior loans and may be less
+liquid. Generally, loans have the benefit of restrictive covenants that
+limit the ability of the borrower to further encumber its assets or impose
+other obligations. To the extent a loan does not have certain covenants
+(or has less restrictive covenants), an investment in the loan will be
+particularly sensitive to the risks associated with loan investments.
+Management Risk. A strategy used by an Underlying Fund’s investment
+adviser may fail to produce the intended results. The Underlying Fund’s
+investment adviser attempts to execute a complex strategy for certain of
+the Underlying Funds using proprietary quantitative models.
+Investments selected using these models may perform differently than
+
+expected as a result of the factors used in the models, the weight placed
+on each factor, changes from the factors’ historical trends, and technical
+issues in the construction and implementation of the models (including,
+for example, data problems and/or software issues). There is no
+guarantee that the Underlying Fund’s investment adviser’s use of these
+quantitative models will result in effective investment decisions for an
+Underlying Fund. Additionally, commonality of holdings across
+quantitative money managers may amplify losses.
+Market Risk. The market value of the securities in which an Underlying
+Fund invests may go up or down in response to the prospects of
+individual companies, particular sectors or governments and/or general
+economic conditions throughout the world due to increasingly
+interconnected global economies and financial markets. Events such as
+war, military conflict, acts of terrorism, social unrest, natural disasters,
+recessions, inflation, rapid interest rate changes, supply chain
+disruptions, sanctions, the spread of infectious illness or other public
+health threats could also significantly impact an Underlying Fund and
+its investments.
+Mid-Cap and Small-Cap Risk. Investments in mid-capitalization and
+small-capitalization companies involve greater risks than those
+associated with larger, more established companies. These securities
+may be subject to more abrupt or erratic price movements and may lack
+sufficient market liquidity, and these issuers often face greater
+business risks.
+Mortgage-Backed and Other Asset-Backed Securities Risk.
+Mortgage-related and other asset-backed securities are subject to credit/
+default, interest rate and certain additional risks, including “extension
+risk” (i.e., in periods of rising interest rates, issuers may pay principal
+later than expected) and “prepayment risk” (i.e., in periods of declining
+interest rates, issuers may pay principal more quickly than expected,
+causing an Underlying Fund to reinvest proceeds at lower prevailing
+interest rates). Due to these risks, asset-backed securities may become
+more volatile in certain interest rate environments. Mortgage-backed
+securities offered by non-governmental issuers are subject to other risks
+as well, including failures of private insurers to meet their obligations
+and unexpectedly high rates of default on the mortgages backing the
+securities, particularly during periods of rising interest rates. Other
+asset-backed securities are subject to risks similar to those associated
+with mortgage-backed securities, as well as risks associated with the
+nature and servicing of the assets backing the securities. Asset-backed
+securities may not have the benefit of a security interest in collateral
+comparable to that of mortgage assets, resulting in additional credit risk.
+Municipal Securities Risk. Municipal securities are subject to call/
+prepayment risk, credit/default risk,extension risk, interest rate risk and
+certain additional risks. An Underlying Fund may be more sensitive to
+adverse economic, business or political developments if it invests a
+substantial portion of its assets in the bonds of similar projects (such as
+those relating to education, health care, housing, transportation, and
+utilities), industrial development bonds, or in particular types of
+municipal securities (such as general obligation bonds, private activity
+bonds and moral obligation bonds). While interest earned on municipal
+securities is generally not subject to federal tax, any interest earned on
+taxable municipal securities is fully taxable at the federal level and may
+be subject to tax at the state level.
+Non-Diversification Risk. Certain Underlying Funds are
+“non-diversified,” meaning that they are permitted to invest a larger
+percentage of their assets in one or more issuers or in fewer issuers than
+“diversified” funds. Thus, such an Underlying Fund may be more
+susceptible to adverse developments affecting any single issuer held in
+its portfolio, and may be more susceptible to greater losses because of
+these developments.
+Non-Hedging Foreign Currency Trading Risk. Certain Underlying
+Funds may engage in forward foreign currency transactions for both
+hedging and non-hedging purposes. An Underlying Fund’s investment
+adviser may purchase or sell foreign currencies through the use of
+forward contracts based on the investment adviser’s judgment regarding
+the direction of the market for a particular foreign currency or
+currencies. In pursuing this strategy, the Underlying Fund’s investment
+adviser seeks to profit from anticipated movements in currency rates by
+establishing “long” and/or “short” positions in forward contracts on
+various foreign currencies. Foreign exchange rates can be extremely
+volatile and a variance in the degree of volatility of the market or in the
+direction of the market from the investment adviser’s expectations may
+produce significant losses to an Underlying Fund. Some of these
+transactions may also be subject to interest rate risk.
+Non-Investment Grade Fixed Income Securities Risk. Non-investment
+grade fixed income securities and unrated securities of comparable
+credit quality (commonly known as “junk bonds”) are considered
+speculative and are subject to the increased risk of an issuer’s inability
+to meet principal and interest payment obligations. These securities may
+be subject to greater price volatility due to such factors as specific
+issuer developments, interest rate sensitivity, negative perceptions of the
+junk bond markets generally and less liquidity.
+Portfolio Turnover Rate Risk. A high rate of portfolio turnover
+involves correspondingly greater expenses which must be borne by an
+Underlying Fund and its shareholders (including the Fund), and is also
+likely to result in short-term capital gains taxable to shareholders of the
+Underlying Fund.
+Real Estate Industry Risk. Certain Underlying Funds are subject to
+certain risks associated with real estate, including, among others:
+possible declines in the value of real estate; risks related to general and
+local economic conditions; possible lack of availability of mortgage
+financing, variations in rental income, neighborhood values or the
+appeal of property to tenants; interest rates; overbuilding; extended
+vacancies of properties; increases in competition, property taxes and
+operating expenses; and changes in zoning laws. The real estate industry
+is particularly sensitive to economic downturns. The values of securities
+of companies in the real estate industry may go through cycles of
+relative under-performance and out-performance in comparison to
+equity securities markets in general.
+REIT Risk. REITs whose underlying properties are concentrated in a
+particular industry or geographic region are subject to risks affecting
+such industries and regions. The securities of REITs involve greater
+risks than those associated with larger, more established companies and
+may be subject to more abrupt or erratic price movements because of
+interest rate changes, economic conditions and other factors. Securities
+of such issuers may lack sufficient market liquidity to enable an
+Underlying Fund to effect sales at an advantageous time or without a
+substantial drop in price.
+Short Position Risk. An Underlying Fund may enter into a short
+position through a futures contract, an option or swap agreement or
+through short sales of any instrument that the Underlying Fund may
+purchase for investment. Taking short positions involves leverage of an
+Underlying Fund’s assets and presents various risks. If the value of the
+underlying instrument or market in which an Underlying Fund has taken
+a short position increases, then the Underlying Fund will incur a loss
+equal to the increase in value from the time that the short position was
+entered into plus any related interest payments or other fees. Taking
+short positions involves the risk that losses may be disproportionate,
+may exceed the amount invested and may be unlimited.
+
+Small-Cap Risk. Investments in small-capitalization companies involve
+greater risks than those associated with larger, more established
+companies. These securities may be subject to more abrupt or erratic
+price movements and may lack sufficient market liquidity, and these
+issuers often face greater business risks.
+Sovereign Default Risk. An issuer of non-U.S. sovereign debt, or the
+governmental authorities that control the repayment of the debt, may be
+unable or unwilling to repay the principal or interest when due. This
+may result from political or social factors, the general economic
+environment of a country, levels of borrowing rates, foreign debt, or
+foreign currency exchange rates.
+Stock Risk. Stock prices have historically risen and fallen in periodic
+cycles. U.S. and foreign stock markets have experienced periods of
+substantial price volatility in the past and may do so again in the future.
+Subsidiary Risk. By investing in a wholly-owned subsidiary organized
+as a company under the laws of the Cayman Islands (a “Subsidiary” or
+the “Subsidiaries”), certain Underlying Funds will be indirectly exposed
+to the risks associated with the Subsidiaries’ investments, which are
+similar to those that are permitted to be held by the Underlying Funds.
+An Underlying Fund is limited in the extent to which it may invest
+directly in commodity-linked swaps or certain other commodity-linked
+derivatives. The Subsidiaries primarily obtain their commodity exposure
+by investing in commodity-linked derivative instruments, which may
+include but are not limited to total return swaps, commodity (U.S. or
+foreign) futures and commodity-linked notes. There can be no assurance
+that the investment objective of the Subsidiaries will be achieved.
+Because the Subsidiaries are not registered under the Investment
+Company Act of 1940, as amended (the “Investment Company Act”),
+they are not subject to all the investor protections thereof. Changes in
+the laws of the United States and/or the Cayman Islands could result in
+the inability of an Underlying Fund and/or its Subsidiary to operate as
+described in its prospectus and could adversely affect the
+Underlying Fund.
+Swaps Risk. In a standard “swap” transaction, two parties agree to
+exchange the returns, differentials in rates of return or some other
+amount earned or realized on the “notional amount” of predetermined
+investments or instruments, which may be adjusted for an interest factor.
+Swaps can involve greater risks than direct investment in securities,
+because swaps may be leveraged and subject to counterparty risk (e.g.,
+the risk of a counterparty’s defaulting on the obligation or bankruptcy),
+credit risk and pricing risk (i.e., swaps may be difficult to value). Swaps
+may also be considered illiquid. It may not be possible for an
+Underlying Fund to liquidate a swap position at an advantageous time or
+price, which may result in significant losses.
+Treasury Inflation Protected Securities Risk. The value of TIPS
+generally fluctuates in response to inflationary concerns. As inflationary
+expectations increase, TIPS will become more attractive, because they
+protect future interest payments against inflation. Conversely, as
+inflationary concerns decrease, TIPS will become less attractive and
+less valuable.
+U.S. Government Securities Risk. The U.S. government may not
+provide financial support to U.S. government agencies, instrumentalities
+or sponsored enterprises if it is not obligated to do so by law. U.S.
+government securities issued by those agencies, instrumentalities and
+sponsored enterprises, including those issued by the Federal National
+Mortgage Association (“Fannie Mae”), Federal Home Loan Mortgage
+Corporation (“Freddie Mac”) and the Federal Home Loan Banks, are
+neither issued nor guaranteed by the U.S. Treasury and, therefore, are
+not backed by the full faith and credit of the United States. The
+maximum potential liability of the issuers of some U.S. government
+securities held by an Underlying Fund may greatly exceed their current
+
+AVERAGE ANNUAL TOTAL RETURN
+For the period ended December 31, 2023 1 Year 5 Years 10 Years
+Inception
+Date
+Class A Shares 1/2/1998
+Returns Before Taxes 10.87% 8.33% 5.75%
+Returns After Taxes on Distributions 10.47% 7.21% 4.92%
+Returns After Taxes on Distributions and Sale of Fund Shares 6.65% 6.36% 4.39%
+Class C Shares 1/2/1998
+Returns Before Taxes 15.47% 8.74% 5.56%*
+Institutional Shares 1/2/1998
+Returns Before Taxes 17.83% 9.98% 6.76%
+Service Shares 1/2/1998
+Returns Before Taxes 17.23% 9.43% 6.24%
+Investor Shares 11/30/2007
+Returns Before Taxes 17.67% 9.84% 6.62%
+Class R Shares 11/30/2007
+Returns 17.07% 9.29% 6.08%
+Class R6 Shares 7/31/2015
+Returns Before Taxes 17.76% 9.97% 6.77%**
+Growth Strategy Composite Index 19.10% 9.87% 6.99%
+MSCI® ACWI Index (Net, USD, Unhedged; reflects no deduction for fees or expenses) 22.20% 11.71% 7.92%
+Bloomberg Global Aggregate Bond Index (Gross, USD, Hedged; reflects no deduction for fees, expenses or taxes) 7.15% 1.39% 2.41%
+* Class C Shares automatically convert into Class A Shares eight years after the purchase date. The 10-Year performance for Class C Shares does not reflect the conversion t
+
+
+
+FEES AND EXPENSES OF THE FUND
+This table describes the fees and expenses that you may pay if you buy, hold and sell shares of the Fund. You may pay other fees, such as brokerage
+commissions and other fees to financial intermediaries, which are not reflected in the table and Example below. You may qualify for sales
+charge discounts on purchases of Class A Shares if you invest at least $50,000 in Goldman Sachs Funds. More information about these and other
+discounts is available from your financial professional and in “Shareholder Guide—Common Questions Applicable to the Purchase of Class A
+Shares” beginning on page 71 and in Appendix C—Additional Information About Sales Charge Variations, Waivers and Discounts beginning on page
+129 of the Prospectus and “Other Information Regarding Maximum Sales Charge, Purchases, Redemptions, Exchanges and Dividends” beginning on
+page B-175 of the Fund’s Statement of Additional Information (“SAI”).
+Shareholder Fees
+(fees paid directly from your investment)
+Class A Class C Institutional Service Investor Class R Class R6
+Maximum Sales Charge (Load) Imposed on Purchases (as a
+percentage of offering price) 5.50% None None None None None None
+Maximum Deferred Sales Charge (Load) (as a percentage of the lower
+of original purchase price or sale proceeds)1 None 1.00% None None None None None
+Annual Fund Operating Expenses
+(expenses that you pay each year as a percentage of the value of your investment)
+Class A Class C Institutional Service Investor Class R Class R6
+Management Fees 0.15% 0.15% 0.15% 0.15% 0.15% 0.15% 0.15%
+Distribution and/or Service (12b-1) Fees 0.25% 0.75% 0.00% 0.25% 0.00% 0.50% 0.00%
+Other Expenses 0.20% 0.45% 0.09% 0.34% 0.20% 0.20% 0.08%
+Service Fees 0.00% 0.25% 0.00% 0.00% 0.00% 0.00% 0.00%
+Shareholder Administration Fees 0.00% 0.00% 0.00% 0.25% 0.00% 0.00% 0.00%
+All Other Expenses 0.20% 0.20% 0.09% 0.09% 0.20% 0.20% 0.08%
+Acquired (Underlying) Fund Fees and Expenses 0.41% 0.41% 0.41% 0.41% 0.41% 0.41% 0.41%
+Total Annual Fund Operating Expenses2 1.01% 1.76% 0.65% 1.15% 0.76% 1.26% 0.64%
+Expense Limitation3 (0.05%) (0.05%) (0.05%) (0.05%) (0.05%) (0.05%) (0.05%)
+Total Annual Fund Operating Expenses After Expense
+Limitation3 0.96% 1.71% 0.60% 1.10% 0.71% 1.21% 0.59%

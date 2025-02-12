@@ -56,7 +56,17 @@ class Chatbot {
     }
 
     setupEventListeners() {
-        this.form.addEventListener('submit', (e) => this.handleSubmit(e));
+        this.form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const message = this.input.value.trim();
+            if (!message) return;
+
+            this.input.value = '';
+            await this.addMessage(message, 'user');
+            
+            const response = await this.processMessage(message);
+            await this.addMessage(response, 'bot');
+        });
         this.minimizeBtn.addEventListener('click', () => this.toggleMinimize());
         this.enrichBtn.addEventListener('click', () => this.enrichKnowledgeBase());
         this.voiceBotBtn.addEventListener('click', () => this.toggleVoiceMode());
@@ -71,33 +81,52 @@ class Chatbot {
         }
     }
 
-    async handleSubmit(event) {
-        event.preventDefault();
-        
-        const message = this.input.value.trim();
-        if (!message) return;
-
-        // Clear input
-        this.input.value = '';
-
-        // Add user message to chat
-        await this.addMessage(message, 'user');
-
-        // Show typing indicator
-        const typingIndicator = this.addTypingIndicator();
-
+    async processMessage(message) {
         try {
-            const response = await this.sendMessage(message, this.isVoiceMode);
-            // Remove typing indicator
-            typingIndicator.remove();
+            this.setTypingIndicator(true);
             
-            // Add bot response
-            await this.addMessage(response, 'bot');
+            const response = await fetch(`${this.fastApiUrl}/api/rag/text_query`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'Origin': window.location.origin
+                },
+                credentials: 'include',
+                body: JSON.stringify({ query: message })
+            });
+
+            const data = await response.json();
+            console.log('RAG response:', data);
+            if (data && data.status === 'success' && data.response) {
+                return data.response;
+            } else {
+                console.error('RAG error:', data);
+                return data.message || 'Sorry, I encountered an error processing your message.';
+            }
         } catch (error) {
-            typingIndicator.remove();
-            await this.addMessage('Sorry, I encountered an error. Please try again.', 'bot');
-            console.error('Chatbot error:', error);
+            console.error('Error processing message:', error);
+            return 'Sorry, I encountered an error processing your message.';
+        } finally {
+            this.setTypingIndicator(false);
         }
+    }
+
+    async addMessage(message, sender) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${sender}-message`;
+        messageDiv.innerHTML = `<div class="message-content">${this.escapeHtml(message)}</div>`;
+        this.messages.appendChild(messageDiv);
+        this.scrollToBottom();
+    }
+
+    escapeHtml(unsafe) {
+        return unsafe
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
     }
 
     async sendMessage(message, isVoice = false) {
@@ -105,7 +134,6 @@ class Chatbot {
             this.addUserMessage(message);
             this.setTypingIndicator(true);
             
-            // Different handling for text mode vs voice mode
             let response;
             if (!isVoice) {
                 // Text mode - use knowledge base only

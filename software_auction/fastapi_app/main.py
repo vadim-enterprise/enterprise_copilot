@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from PyPDF2 import PdfReader
 from .routers import websearch_router
+from .services.websearch_service import WebSearchService
 from .rag.hybrid_rag import HybridRAG
 from .rag.rag_service import RAGService
 import logging
@@ -83,7 +84,12 @@ app.mount("/media", StaticFiles(directory=str(MEDIA_DIR)), name="media")
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8000", "http://127.0.0.1:8000", "http://localhost:8001", "http://127.0.0.1:8001"],
+    allow_origins=[
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "http://localhost:8001",
+        "http://127.0.0.1:8001"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=[
@@ -93,6 +99,7 @@ app.add_middleware(
         "Origin",
         "X-Requested-With",
     ],
+    allow_origin_regex=None,
     expose_headers=["*"],
     max_age=3600,
 )
@@ -273,6 +280,6 @@ async def health_check():
     }
 
 # Include routers - moved after endpoint definitions
-app.include_router(websearch_router.router, prefix="/api/websearch")
-app.include_router(speech_router, prefix="/api/speech")
-app.include_router(rag_router, prefix="/api/rag")
+app.include_router(websearch_router.router, prefix="/api/websearch", tags=["websearch"])
+app.include_router(speech_router, prefix="/api/speech", tags=["speech"])
+app.include_router(rag_router, prefix="/api/rag", tags=["rag"])

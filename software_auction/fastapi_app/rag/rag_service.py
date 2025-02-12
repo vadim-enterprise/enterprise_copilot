@@ -403,36 +403,28 @@ class RAGService:
             }
 
     @staticmethod
-    def handle_text_query(request) -> JsonResponse:
+    def handle_text_query(query: str) -> str:
         """Handle text mode query using only knowledge base"""
         try:
-            data = json.loads(request.body)
-            query = data.get('query')
-            
-            if not query:
-                return JsonResponse({
-                    'status': 'error',
-                    'message': 'Query is required'
-                })
+            logger.info(f"Processing text query: {query}")
             
             rag = HybridRAG()
             
             # Get context from knowledge base
             context = rag.get_factual_context(query)
             
+            # Format context as a string if it's not already
+            if isinstance(context, (list, dict)):
+                context = str(context)
+            
             # Generate response using only knowledge base context
             response = rag.generate_response(query, context=context)
             
-            return JsonResponse({
-                'status': 'success',
-                'response': response,
-                'context_used': context,
-                'sources': [s.get('source') for s in rag.last_query_metadata.get('metadata', [])]
-            })
+            if not response:
+                raise ValueError("No response generated from RAG service")
+            
+            return response
             
         except Exception as e:
             logger.error(f"Error processing text query: {str(e)}")
-            return JsonResponse({
-                'status': 'error',
-                'message': str(e)
-            }) 
+            raise Exception(f"Failed to process query: {str(e)}") 
