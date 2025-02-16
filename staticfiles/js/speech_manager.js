@@ -16,9 +16,6 @@ class SpeechManager {
         this.isWhisperEnabled = false;
         this.whisperQueue = [];
         this.isProcessingWhisper = false;
-        this.tts = null;
-        this.ttsEnabled = false;
-        this.ttsCallback = null;
 
         // Store the knowledge base content
         this.knowledgeBaseContent = null;
@@ -565,53 +562,6 @@ class SpeechManager {
         } finally {
             this.isProcessingWhisper = false;
         }
-    }
-
-    async speakText(text, voice = 'alloy') {
-        if (!this.ttsEnabled) return false;
-        
-        try {
-            const response = await fetch(`${this.fastApiUrl}/api/speech/generate-speech/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                },
-                credentials: 'include',
-                body: JSON.stringify({
-                    text: text,
-                    voice: voice
-                })
-            });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            const data = await response.json();
-            if (data.status === 'success' && data.audio_url) {
-                if (this.ttsCallback) {
-                    this.ttsCallback(data.audio_url);
-                }
-                return true;
-            }
-            return false;
-        } catch (error) {
-            console.error('Error in text-to-speech:', error);
-            return false;
-        }
-    }
-
-    enableTTS() {
-        this.ttsEnabled = true;
-    }
-
-    disableTTS() {
-        this.ttsEnabled = false;
-    }
-
-    setTTSCallback(callback) {
-        this.ttsCallback = callback;
     }
 }
 

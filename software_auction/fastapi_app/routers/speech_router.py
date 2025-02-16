@@ -22,14 +22,6 @@ logger = logging.getLogger(__name__)
 # Initialize OpenAI client
 openai_client = OpenAI()
 
-@router.post("/generate-speech/")
-async def generate_speech(text: str, voice: str = "alloy"):
-    """Endpoint to generate speech from text."""
-    result = tts_service.generate_speech(text, voice)
-    if result['status'] == 'error':
-        raise HTTPException(status_code=500, detail=result['message'])
-    return result
-
 @router.post("/transcribe-speech/")
 async def transcribe_speech(audio: UploadFile = File(...)):
     """Transcribe speech using Whisper API"""

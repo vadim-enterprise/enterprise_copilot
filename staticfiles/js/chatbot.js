@@ -45,17 +45,11 @@ class Chatbot {
         // Use the global SpeechManager
         this.speechManager = new window.SpeechManager();
         this.speechManager.enableWhisper();
-        this.speechManager.enableTTS();  // Enable TTS support
         this.isSpeechMode = false;
 
-        this.speechManager.setTranscriptCallback((text) => {
-            console.log('Received transcript:', text);
-        });
-        
         // Set up speech callbacks
-        this.speechManager.setTranscriptCallback((text) => this.handleTranscript(text));
+        this.speechManager.setTranscriptCallback((text) => this.showTranscript(text));
         this.speechManager.setAudioCallback((audio) => this.handleAudioResponse(audio));
-        this.speechManager.setTTSCallback((audioUrl) => this.handleTTSResponse(audioUrl));
         
         // Add transcription properties
         this.isTranscribing = false;
@@ -197,9 +191,6 @@ class Chatbot {
     async processVoiceMessage(text) {
         try {
             const response = await this.processMessage(text);
-            if (this.isVoiceMode) {
-                await this.speechManager.speakText(response);
-            }
             return response;
         } catch (error) {
             console.error('Error processing voice message:', error);
@@ -528,10 +519,91 @@ class Chatbot {
             // Add user's speech to chat
             await this.addMessage(text, 'user');
             
+            // Check if text contains chart-related keywords
+            if (this.isChartRequest(text)) {
+                try {
+                    const chartCode = this.generateChartCode(text);
+                    // Add the chart code as a bot message with code formatting
+                    await this.addMessage("Here's the Chart.js code for your request:\n```javascript\n" + 
+                        chartCode + "\n```", 'bot');
+                } catch (error) {
+                    console.error('Error generating chart code:', error);
+                    await this.addMessage("Sorry, I couldn't generate the chart code.", 'bot');
+                }
+            }
+            
             // Use the same processing as text mode
             const response = await this.processVoiceMessage(text);
             await this.addMessage(response, 'bot');
         }
+    }
+
+    isChartRequest(text) {
+        const chartKeywords = ['chart', 'graph', 'plot', 'bar chart', 'line graph', 'pie chart'];
+        return chartKeywords.some(keyword => text.toLowerCase().includes(keyword));
+    }
+
+    generateChartCode(text) {
+        // Basic chart type detection
+        const type = this.detectChartType(text);
+        
+        // Generate sample data based on the request
+        const data = this.generateSampleData(text);
+        
+        return `
+            const ctx = document.getElementById('myChart').getContext('2d');
+            new Chart(ctx, {
+                type: '${type}',
+                data: {
+                    labels: ${JSON.stringify(data.labels)},
+                    datasets: [{
+                        label: '${data.label}',
+                        data: ${JSON.stringify(data.values)},
+                        backgroundColor: ${JSON.stringify(data.colors)},
+                        borderColor: ${JSON.stringify(data.borderColors)},
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        `.trim();
+    }
+
+    detectChartType(text) {
+        if (text.toLowerCase().includes('pie')) return 'pie';
+        if (text.toLowerCase().includes('line')) return 'line';
+        if (text.toLowerCase().includes('bar')) return 'bar';
+        return 'bar'; // default type
+    }
+
+    generateSampleData(text) {
+        // Default sample data
+        return {
+            labels: ['January', 'February', 'March', 'April', 'May'],
+            values: [12, 19, 3, 5, 2],
+            label: 'Sample Data',
+            colors: [
+                'rgba(255, 99, 132, 0.2)',
+                'rgba(54, 162, 235, 0.2)',
+                'rgba(255, 206, 86, 0.2)',
+                'rgba(75, 192, 192, 0.2)',
+                'rgba(153, 102, 255, 0.2)'
+            ],
+            borderColors: [
+                'rgba(255, 99, 132, 1)',
+                'rgba(54, 162, 235, 1)',
+                'rgba(255, 206, 86, 1)',
+                'rgba(75, 192, 192, 1)',
+                'rgba(153, 102, 255, 1)'
+            ]
+        };
     }
 
     handleAudioResponse(audioUrl) {
@@ -653,29 +725,10 @@ class Chatbot {
             // Start new transcript
             this.isTranscribing = true;
             this.currentTranscript = text;
-            this.transcriptMessageDiv = document.createElement('div');
-            this.transcriptMessageDiv.className = 'message user-message transcript';
-            this.transcriptMessageDiv.innerHTML = `
-                <div class="message-content">
-                    <div class="transcript-indicator">🎤 </div>
-                    <span class="transcript-text">${this.escapeHtml(text)}</span>
-                </div>
-            `;
-            this.messages.appendChild(this.transcriptMessageDiv);
-            this.scrollToBottom();
-        }
-        
-        // Process complete transcript
-        await this.handleTranscript(text);
-        this.isTranscribing = false;
-        this.transcriptMessageDiv = null;
-    }
-
-    // Add new TTS handler without modifying existing ones
-    async handleTTSResponse(audioUrl) {
-        if (audioUrl && this.isVoiceMode) {
-            this.audio.src = audioUrl;
-            await this.audio.play();
+            
+            // Process complete transcript
+            await this.handleTranscript(text);
+            this.isTranscribing = false;
         }
     }
 }
