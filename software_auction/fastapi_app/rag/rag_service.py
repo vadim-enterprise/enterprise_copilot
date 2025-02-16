@@ -10,8 +10,14 @@ from django.conf import settings
 from pathlib import Path
 from typing import Dict, Any, List
 from ..services.knowledge_service import KnowledgeService
+from openai import OpenAI
 
 logger = logging.getLogger(__name__)
+
+# Initialize OpenAI client
+client = OpenAI(
+    api_key=os.getenv("OPENAI_API_KEY"),
+)
 
 class RAGService:
     """Service class for RAG operations"""
@@ -403,28 +409,43 @@ class RAGService:
             }
 
     @staticmethod
-    def handle_text_query(query: str) -> str:
-        """Handle text mode query using only knowledge base"""
+    def handle_text_query(data: Dict[str, Any]) -> Dict[str, Any]:
         try:
-            logger.info(f"Processing text query: {query}")
+            query = data.get('query')
+            if not query:
+                return {
+                    "status": "error",
+                    "detail": "No query provided"
+                }
             
-            rag = HybridRAG()
+            # Format messages for OpenAI
+            messages = [
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": str(query)}  # Ensure query is a string
+            ]
             
-            # Get context from knowledge base
-            context = rag.get_factual_context(query)
+            # Call OpenAI API using new client format
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                messages=messages,
+                temperature=0.7,
+                max_tokens=500
+            )
             
-            # Format context as a string if it's not already
-            if isinstance(context, (list, dict)):
-                context = str(context)
-            
-            # Generate response using only knowledge base context
-            response = rag.generate_response(query, context=context)
-            
-            if not response:
-                raise ValueError("No response generated from RAG service")
-            
-            return response
-            
+            # Extract and return the response
+            if response.choices and response.choices[0].message:
+                return {
+                    "status": "success",
+                    "response": response.choices[0].message.content
+                }
+            else:
+                return {
+                    "status": "error",
+                    "detail": "No response generated"
+                }
         except Exception as e:
-            logger.error(f"Error processing text query: {str(e)}")
-            raise Exception(f"Failed to process query: {str(e)}") 
+            logger.error(f"Error in handle_text_query: {str(e)}")
+            return {
+                "status": "error",
+                "detail": f"Failed to process query: {str(e)}"
+            } 

@@ -44,11 +44,23 @@ class Chatbot {
         
         // Use the global SpeechManager
         this.speechManager = new window.SpeechManager();
+        this.speechManager.enableWhisper();
+        this.speechManager.enableTTS();  // Enable TTS support
         this.isSpeechMode = false;
+
+        this.speechManager.setTranscriptCallback((text) => {
+            console.log('Received transcript:', text);
+        });
         
         // Set up speech callbacks
         this.speechManager.setTranscriptCallback((text) => this.handleTranscript(text));
         this.speechManager.setAudioCallback((audio) => this.handleAudioResponse(audio));
+        this.speechManager.setTTSCallback((audioUrl) => this.handleTTSResponse(audioUrl));
+        
+        // Add transcription properties
+        this.isTranscribing = false;
+        this.transcriptMessageDiv = null;
+        this.currentTranscript = '';
         
         this.initializeServices();
         
@@ -85,28 +97,36 @@ class Chatbot {
         try {
             this.setTypingIndicator(true);
             
+            // Ensure message is a string
+            const query = typeof message === 'string' ? message : String(message);
+            
             const response = await fetch(`${this.fastApiUrl}/api/rag/text_query`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
-                    'Origin': window.location.origin
                 },
                 credentials: 'include',
-                body: JSON.stringify({ query: message })
+                body: JSON.stringify({ query })
             });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error('RAG error response:', errorData);
+                throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+            }
 
             const data = await response.json();
             console.log('RAG response:', data);
-            if (data && data.status === 'success' && data.response) {
+            if (data?.status === 'success' && typeof data.response === 'string') {
                 return data.response;
             } else {
-                console.error('RAG error:', data);
-                return data.message || 'Sorry, I encountered an error processing your message.';
+                console.error('Invalid response format:', data);
+                throw new Error('Invalid response format from RAG service');
             }
         } catch (error) {
             console.error('Error processing message:', error);
-            return 'Sorry, I encountered an error processing your message.';
+            return `Sorry, I encountered an error: ${error.message}`;
         } finally {
             this.setTypingIndicator(false);
         }
@@ -174,38 +194,16 @@ class Chatbot {
         }
     }
 
-    async processVoiceMessage(message) {
+    async processVoiceMessage(text) {
         try {
-            // Use the same RAG query endpoint as text mode
-            const response = await fetch(`${this.fastApiUrl}/api/rag/query`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ query: message })
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+            const response = await this.processMessage(text);
+            if (this.isVoiceMode) {
+                await this.speechManager.speakText(response);
             }
-
-            const data = await response.json();
-            if (data.status === 'success') {
-                let botResponse = data.response;
-                
-                // If in voice mode, also get speech synthesis
-                if (this.isVoiceMode) {
-                    await this.speechManager.speakText(botResponse);
-                }
-                
-
-                return botResponse;
-            } else {
-                throw new Error(data.message || 'Error processing query');
-            }
+            return response;
         } catch (error) {
-            console.error('Error processing message:', error);
-            throw error;
+            console.error('Error processing voice message:', error);
+            return 'Sorry, I encountered an error processing your voice message.';
         }
     }
 
@@ -479,12 +477,32 @@ class Chatbot {
             return;
         }
         
-        this.isSpeechMode = !this.isSpeechMode;
-        
-        if (this.isSpeechMode) {
+        if (!this.isSpeechMode) {
             try {
                 this.micButton.classList.add('recording');
                 await this.speechManager.startListening();
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                this.mediaRecorder = new MediaRecorder(stream);
+                this.audioChunks = [];
+                
+                this.mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        this.audioChunks.push(event.data);
+                    }
+                };
+                
+                this.mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
+                    // Process both regular speech and Whisper transcription
+                    await Promise.all([
+                        this.speechManager.processAudio(audioBlob),
+                        this.processWhisperTranscription(audioBlob)
+                    ]);
+                    this.audioChunks = [];
+                };
+                
+                this.mediaRecorder.start(1000);
+                this.isSpeechMode = true;
                 this.showNotification('Speech mode activated - Start speaking', 'success');
             } catch (error) {
                 console.error('Error starting speech mode:', error);
@@ -495,6 +513,10 @@ class Chatbot {
         } else {
             this.micButton.classList.remove('recording');
             await this.speechManager.stopListening();
+            if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
+                this.mediaRecorder.stop();
+            }
+            this.isSpeechMode = false;
             await this.speechManager.cleanup();
             this.speechManager.isInitialized = false;
             this.showNotification('Speech mode deactivated', 'info');
@@ -512,13 +534,10 @@ class Chatbot {
         }
     }
 
-    handleAudioResponse(audio) {
-        // Handle incoming audio from the assistant
-        if (audio && this.isSpeechMode) {
-            const audioBlob = new Blob([audio], { type: 'audio/wav' });
-            const audioUrl = URL.createObjectURL(audioBlob);
-            const audioEl = new Audio(audioUrl);
-            audioEl.play();
+    handleAudioResponse(audioUrl) {
+        if (audioUrl) {
+            this.audio.src = audioUrl;
+            this.audio.play();
         }
     }
 
@@ -599,6 +618,64 @@ class Chatbot {
         } catch (error) {
             console.error('Startup check failed:', error);
             this.enableFallbackMode();
+        }
+    }
+
+    async processWhisperTranscription(audioBlob) {
+        try {
+            const formData = new FormData();
+            formData.append('audio', audioBlob, 'audio.webm');
+            
+            const response = await fetch(`${this.fastApiUrl}/api/speech/transcribe-speech/`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'Accept': 'application/json'
+                },
+                body: formData
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            if (data.status === 'success' && data.text) {
+                await this.showTranscript(data.text);
+            }
+        } catch (error) {
+            console.error('Whisper transcription error:', error);
+        }
+    }
+
+    async showTranscript(text) {
+        if (!this.isTranscribing) {
+            // Start new transcript
+            this.isTranscribing = true;
+            this.currentTranscript = text;
+            this.transcriptMessageDiv = document.createElement('div');
+            this.transcriptMessageDiv.className = 'message user-message transcript';
+            this.transcriptMessageDiv.innerHTML = `
+                <div class="message-content">
+                    <div class="transcript-indicator">🎤 </div>
+                    <span class="transcript-text">${this.escapeHtml(text)}</span>
+                </div>
+            `;
+            this.messages.appendChild(this.transcriptMessageDiv);
+            this.scrollToBottom();
+        }
+        
+        // Process complete transcript
+        await this.handleTranscript(text);
+        this.isTranscribing = false;
+        this.transcriptMessageDiv = null;
+    }
+
+    // Add new TTS handler without modifying existing ones
+    async handleTTSResponse(audioUrl) {
+        if (audioUrl && this.isVoiceMode) {
+            this.audio.src = audioUrl;
+            await this.audio.play();
         }
     }
 }

@@ -5,6 +5,8 @@ from ..services.tts_service import TTSService
 from ..services.insights_service import InsightsService
 from ..services.knowledge_service import KnowledgeService
 import logging
+import os
+from openai import OpenAI
 
 router = APIRouter()
 
@@ -17,6 +19,9 @@ knowledge_service = KnowledgeService()
 
 logger = logging.getLogger(__name__)
 
+# Initialize OpenAI client
+openai_client = OpenAI()
+
 @router.post("/generate-speech/")
 async def generate_speech(text: str, voice: str = "alloy"):
     """Endpoint to generate speech from text."""
@@ -27,8 +32,39 @@ async def generate_speech(text: str, voice: str = "alloy"):
 
 @router.post("/transcribe-speech/")
 async def transcribe_speech(audio: UploadFile = File(...)):
-    """Transcribe speech to text"""
-    return await transcription_service.transcribe_audio(audio)
+    """Transcribe speech using Whisper API"""
+    try:
+        # Read the audio file
+        audio_content = await audio.read()
+        
+        # Create a temporary file
+        temp_path = f"temp_{audio.filename}"
+        try:
+            # Save audio to temporary file
+            with open(temp_path, "wb") as temp_file:
+                temp_file.write(audio_content)
+            
+            # Transcribe using Whisper
+            with open(temp_path, "rb") as audio_file:
+                transcript = openai_client.audio.transcriptions.create(
+                    file=audio_file,
+                    model="whisper-1",
+                    response_format="text"
+                )
+            
+            return {
+                "status": "success",
+                "text": transcript
+            }
+            
+        finally:
+            # Clean up temporary file
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+                
+    except Exception as e:
+        logger.error(f"Error transcribing speech: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/health-check")
 async def health_check():

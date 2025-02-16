@@ -1,9 +1,11 @@
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
 from pathlib import Path
 from PyPDF2 import PdfReader
 from .routers import websearch_router
+from .routers.speech_router import router as speech_router
 from .services.websearch_service import WebSearchService
 from .rag.hybrid_rag import HybridRAG
 from .rag.rag_service import RAGService
@@ -14,10 +16,24 @@ from typing import Dict, Any
 import json
 import time
 
+# Define allowed origins
+ALLOWED_ORIGINS = [
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+    "http://localhost:8001",
+    "http://127.0.0.1:8001"
+]
+
 # Create a router for speech-related endpoints
 from fastapi import APIRouter
-speech_router = APIRouter()
 rag_router = APIRouter()
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+app = FastAPI()
+hybrid_rag = HybridRAG()
 
 # RAG endpoints
 @rag_router.post("/enrich")
@@ -27,11 +43,69 @@ async def enrich_knowledge_base(request: Request):
     result = RAGService.handle_enrich_knowledge_base(data)
     return result
 
+@rag_router.options("/text_query")
+async def text_query_options():
+    """Handle OPTIONS request for CORS preflight"""
+    return Response(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "http://127.0.0.1:8000",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+            "Access-Control-Allow-Credentials": "true"
+        },
+    )
+
 @rag_router.post("/text_query")
 async def text_query(request: Request):
     """Handle text mode queries"""
-    data = await request.json()
-    return RAGService.handle_text_query(data)
+    try:
+        data = await request.json()
+        logger.info(f"Received text query: {data}")
+        
+        # Ensure query is a string
+        if not isinstance(data.get('query'), str):
+            raise HTTPException(status_code=400, detail="Query must be a string")
+        
+        result = RAGService.handle_text_query(data)
+        logger.info(f"RAG service response: {result}")
+        
+        if not result:
+            raise HTTPException(status_code=500, detail="No response from RAG service")
+        
+        # Format response as a simple string if it's not already
+        if isinstance(result, dict):
+            response_content = {
+                "status": "success",
+                "response": result.get("response", str(result))
+            }
+        else:
+            response_content = {
+                "status": "success",
+                "response": str(result)
+            }
+
+        return JSONResponse(
+            content=response_content,
+            headers={
+                "Access-Control-Allow-Origin": request.headers.get("origin"),
+                "Access-Control-Allow-Credentials": "true"
+            }
+        )
+    except Exception as e:
+        logger.error(f"Error in text_query: {str(e)}")
+        logger.exception("Full traceback:")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "status": "error",
+                "detail": str(e)
+            },
+            headers={
+                "Access-Control-Allow-Origin": request.headers.get("origin"),
+                "Access-Control-Allow-Credentials": "true"
+            }
+        )
 
 @rag_router.get("/text_instructions")
 async def get_text_instructions():
@@ -66,13 +140,6 @@ async def get_text_instructions():
         logger.exception("Full traceback:")
         raise HTTPException(status_code=500, detail=str(e))
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-app = FastAPI()
-hybrid_rag = HybridRAG()
-
 # Ensure media directory exists
 MEDIA_DIR = Path(__file__).resolve().parent.parent.parent / 'media'
 MEDIA_DIR.mkdir(parents=True, exist_ok=True)
@@ -81,37 +148,69 @@ logger.info(f"Media directory: {MEDIA_DIR}")
 # Mount static files
 app.mount("/media", StaticFiles(directory=str(MEDIA_DIR)), name="media")
 
-# Add CORS middleware
+# Configure CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:8000",
-        "http://127.0.0.1:8000",
-        "http://localhost:8001",
-        "http://127.0.0.1:8001"
-    ],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=[
-        "Content-Type",
-        "Authorization",
-        "Accept",
-        "Origin",
-        "X-Requested-With",
-    ],
-    allow_origin_regex=None,
-    expose_headers=["*"],
-    max_age=3600,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
+    expose_headers=["*"]
 )
 
-# Add CORS headers to all responses
-@app.middleware("http")
-async def add_cors_headers(request: Request, call_next):
-    response = await call_next(request)
+@app.options("/{full_path:path}")
+async def preflight_handler(request: Request, full_path: str):
+    """Handle CORS preflight requests for all routes"""
+    requested_headers = request.headers.get("access-control-request-headers", "")
     origin = request.headers.get("origin")
-    if origin in ["http://localhost:8000", "http://127.0.0.1:8000", "http://localhost:8001", "http://127.0.0.1:8001"]:
-        response.headers["Access-Control-Allow-Origin"] = origin
-    return response
+    
+    if origin in ALLOWED_ORIGINS:
+        return Response(
+            status_code=200,
+            headers={
+                "Access-Control-Allow-Origin": origin,
+                "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+                "Access-Control-Allow-Headers": requested_headers or "*",
+                "Access-Control-Allow-Credentials": "true",
+                "Access-Control-Max-Age": "3600"
+            }
+        )
+    return Response(status_code=400)
+
+# Custom middleware to handle CORS
+@app.middleware("http")
+async def cors_middleware(request: Request, call_next):
+    try:
+        response = await call_next(request)
+        
+        # Get origin from request headers
+        origin = request.headers.get("origin")
+        
+        # If origin is in allowed list, add CORS headers
+        if origin in ALLOWED_ORIGINS:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+            # Get requested headers from preflight request
+            requested_headers = request.headers.get("access-control-request-headers", "*")
+            response.headers["Access-Control-Allow-Headers"] = requested_headers
+        
+        return response
+    except Exception as e:
+        # Create a new response for errors
+        response = JSONResponse(
+            status_code=500,
+            content={"detail": str(e)}
+        )
+        
+        # Add CORS headers to error response
+        if origin in ALLOWED_ORIGINS:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "*"
+        
+        return response
 
 @speech_router.get("/session")
 async def create_session(config: str = None):
@@ -276,6 +375,7 @@ async def health_check():
         "message": "FastAPI server is running",
         "services": {
             "search": "available",
+            "speech": "available",
         }
     }
 
@@ -283,3 +383,21 @@ async def health_check():
 app.include_router(websearch_router.router, prefix="/api/websearch", tags=["websearch"])
 app.include_router(speech_router, prefix="/api/speech", tags=["speech"])
 app.include_router(rag_router, prefix="/api/rag", tags=["rag"])
+
+
+
+
+# User speaks → chatbot.js → speech_manager.js → 
+# FastAPI main.py → speech_router.py → 
+# Process → Response → 
+# main.py → speech_manager.js → chatbot.js → User hears response
+
+
+# graph TD
+#     A[User Speaks] --> B[chatbot.js]
+#     B --> C[speech_manager.js]
+#     C -- "POST /api/speech/transcribe-speech/" --> D[speech_router.py]
+#     D -- Whisper API --> E[OpenAI]
+#     E -- Transcript --> D
+#     D -- JSON Response --> C
+#     C --> B[Display Text]

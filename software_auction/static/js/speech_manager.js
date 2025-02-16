@@ -11,6 +11,14 @@ class SpeechManager {
         this.lastQuery = null;
         this.conversationHistory = [];
         this.fastApiUrl = 'http://127.0.0.1:8001';
+        this.transcriptCallback = null;
+        this.audioCallback = null;
+        this.isWhisperEnabled = false;
+        this.whisperQueue = [];
+        this.isProcessingWhisper = false;
+        this.tts = null;
+        this.ttsEnabled = false;
+        this.ttsCallback = null;
 
         // Store the knowledge base content
         this.knowledgeBaseContent = null;
@@ -407,7 +415,7 @@ class SpeechManager {
     }
 
     setTranscriptCallback(callback) {
-        this.onTranscript = callback;
+        this.transcriptCallback = callback;
     }
 
     setAudioCallback(callback) {
@@ -494,6 +502,116 @@ class SpeechManager {
             console.error('Error processing user input:', error);
             throw error;
         }
+    }
+
+    async processAudioWithWhisper(audioBlob) {
+        try {
+            const formData = new FormData();
+            formData.append('audio', audioBlob, 'audio.webm');
+            
+            const response = await fetch(`${this.fastApiUrl}/api/speech/transcribe-speech/`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'Accept': 'application/json',
+                },
+                body: formData
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Transcription error: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            return data.status === 'success' ? data.text : null;
+        } catch (error) {
+            console.error('Whisper transcription error:', error);
+            return null;
+        }
+    }
+
+    enableWhisper() {
+        this.isWhisperEnabled = true;
+    }
+
+    disableWhisper() {
+        this.isWhisperEnabled = false;
+    }
+
+    async processAudio(audioBlob) {
+        // Process with existing functionality
+        await this.existingAudioProcessing(audioBlob);
+        
+        // If Whisper is enabled, also process with Whisper
+        if (this.isWhisperEnabled) {
+            this.whisperQueue.push(audioBlob);
+            await this.processWhisperQueue();
+        }
+    }
+
+    async processWhisperQueue() {
+        if (this.isProcessingWhisper || this.whisperQueue.length === 0) return;
+        
+        this.isProcessingWhisper = true;
+        try {
+            while (this.whisperQueue.length > 0) {
+                const audioBlob = this.whisperQueue.shift();
+                const transcript = await this.processAudioWithWhisper(audioBlob);
+                
+                if (transcript && this.transcriptCallback) {
+                    this.transcriptCallback(transcript);
+                }
+            }
+        } finally {
+            this.isProcessingWhisper = false;
+        }
+    }
+
+    async speakText(text, voice = 'alloy') {
+        if (!this.ttsEnabled) return false;
+        
+        try {
+            const response = await fetch(`${this.fastApiUrl}/api/speech/generate-speech/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    text: text,
+                    voice: voice
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            if (data.status === 'success' && data.audio_url) {
+                if (this.ttsCallback) {
+                    this.ttsCallback(data.audio_url);
+                }
+                return true;
+            }
+            return false;
+        } catch (error) {
+            console.error('Error in text-to-speech:', error);
+            return false;
+        }
+    }
+
+    enableTTS() {
+        this.ttsEnabled = true;
+    }
+
+    disableTTS() {
+        this.ttsEnabled = false;
+    }
+
+    setTTSCallback(callback) {
+        this.ttsCallback = callback;
     }
 }
 
