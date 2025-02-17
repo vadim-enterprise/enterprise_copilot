@@ -59,6 +59,9 @@ class Chatbot {
         this.initializeServices();
         
         this.setupEventListeners();
+
+        // Create chart container
+        this.createChartContainer();
     }
 
     setupEventListeners() {
@@ -479,20 +482,22 @@ class Chatbot {
                 this.mediaRecorder.ondataavailable = (event) => {
                     if (event.data.size > 0) {
                         this.audioChunks.push(event.data);
+                        // Process each chunk in real-time
+                        if (this.audioChunks.length > 0) {
+                            const currentBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
+                            this.processWhisperTranscription(currentBlob, true);
+                        }
                     }
                 };
                 
                 this.mediaRecorder.onstop = async () => {
                     const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
-                    // Process both regular speech and Whisper transcription
-                    await Promise.all([
-                        this.speechManager.processAudio(audioBlob),
-                        this.processWhisperTranscription(audioBlob)
-                    ]);
+                    // Process final transcription
+                    await this.processWhisperTranscription(audioBlob, false);
                     this.audioChunks = [];
                 };
                 
-                this.mediaRecorder.start(1000);
+                this.mediaRecorder.start(500);  // Reduce chunk size for more frequent updates
                 this.isSpeechMode = true;
                 this.showNotification('Speech mode activated - Start speaking', 'success');
             } catch (error) {
@@ -522,10 +527,45 @@ class Chatbot {
             // Check if text contains chart-related keywords
             if (this.isChartRequest(text)) {
                 try {
-                    const chartCode = this.generateChartCode(text);
+                    const chartCode = this.extractChartCode(text);
                     // Add the chart code as a bot message with code formatting
                     await this.addMessage("Here's the Chart.js code for your request:\n```javascript\n" + 
                         chartCode + "\n```", 'bot');
+                    
+                    // Execute the chart code
+                    try {
+                        if (typeof Chart === 'undefined') {
+                            throw new Error('Chart.js is not loaded.');
+                        }
+
+                        // Destroy existing chart if any
+                        if (window.currentChart) {
+                            window.currentChart.destroy();
+                        }
+                        
+                        // Execute the transcribed code
+                        const ctx = document.getElementById('myChart').getContext('2d');
+                        const chartConfig = this.parseChartCode(chartCode);
+                        window.currentChart = new Chart(ctx, {
+                            ...chartConfig,
+                            options: {
+                                ...chartConfig.options,
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                animation: {
+                                    duration: 1000
+                                },
+                                scales: {
+                                    y: {
+                                        beginAtZero: true
+                                    }
+                                }
+                            }
+                        });
+                    } catch (chartError) {
+                        console.error('Error creating chart:', chartError);
+                        await this.addMessage("Error: Could not create chart. " + chartError.message, 'bot');
+                    }
                 } catch (error) {
                     console.error('Error generating chart code:', error);
                     await this.addMessage("Sorry, I couldn't generate the chart code.", 'bot');
@@ -543,67 +583,29 @@ class Chatbot {
         return chartKeywords.some(keyword => text.toLowerCase().includes(keyword));
     }
 
-    generateChartCode(text) {
-        // Basic chart type detection
-        const type = this.detectChartType(text);
-        
-        // Generate sample data based on the request
-        const data = this.generateSampleData(text);
-        
-        return `
-            const ctx = document.getElementById('myChart').getContext('2d');
-            new Chart(ctx, {
-                type: '${type}',
-                data: {
-                    labels: ${JSON.stringify(data.labels)},
-                    datasets: [{
-                        label: '${data.label}',
-                        data: ${JSON.stringify(data.values)},
-                        backgroundColor: ${JSON.stringify(data.colors)},
-                        borderColor: ${JSON.stringify(data.borderColors)},
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
-                    }
-                }
-            });
-        `.trim();
+    extractChartCode(text) {
+        // Look for code block in the conversation
+        const codeBlockMatch = text.match(/```javascript\n([\s\S]*?)\n```/);
+        if (codeBlockMatch) {
+            return codeBlockMatch[1];
+        }
+        throw new Error('No chart code found in conversation');
     }
 
-    detectChartType(text) {
-        if (text.toLowerCase().includes('pie')) return 'pie';
-        if (text.toLowerCase().includes('line')) return 'line';
-        if (text.toLowerCase().includes('bar')) return 'bar';
-        return 'bar'; // default type
-    }
-
-    generateSampleData(text) {
-        // Default sample data
-        return {
-            labels: ['January', 'February', 'March', 'April', 'May'],
-            values: [12, 19, 3, 5, 2],
-            label: 'Sample Data',
-            colors: [
-                'rgba(255, 99, 132, 0.2)',
-                'rgba(54, 162, 235, 0.2)',
-                'rgba(255, 206, 86, 0.2)',
-                'rgba(75, 192, 192, 0.2)',
-                'rgba(153, 102, 255, 0.2)'
-            ],
-            borderColors: [
-                'rgba(255, 99, 132, 1)',
-                'rgba(54, 162, 235, 1)',
-                'rgba(255, 206, 86, 1)',
-                'rgba(75, 192, 192, 1)',
-                'rgba(153, 102, 255, 1)'
-            ]
-        };
+    parseChartCode(code) {
+        try {
+            // Remove any 'new Chart' wrapper and get the configuration object
+            const configMatch = code.match(/new Chart\([^,]+,\s*({[\s\S]+})\s*\)/);
+            if (configMatch) {
+                // Parse the configuration object
+                const config = eval(`(${configMatch[1]})`);
+                return config;
+            }
+            throw new Error('Invalid chart configuration format');
+        } catch (error) {
+            console.error('Error parsing chart code:', error);
+            throw error;
+        }
     }
 
     handleAudioResponse(audioUrl) {
@@ -693,7 +695,7 @@ class Chatbot {
         }
     }
 
-    async processWhisperTranscription(audioBlob) {
+    async processWhisperTranscription(audioBlob, isStreaming = false) {
         try {
             const formData = new FormData();
             formData.append('audio', audioBlob, 'audio.webm');
@@ -713,23 +715,247 @@ class Chatbot {
             
             const data = await response.json();
             if (data.status === 'success' && data.text) {
-                await this.showTranscript(data.text);
+                await this.handleTranscriptInRealTime(data.text, isStreaming);
             }
         } catch (error) {
             console.error('Whisper transcription error:', error);
         }
     }
 
-    async showTranscript(text) {
-        if (!this.isTranscribing) {
-            // Start new transcript
-            this.isTranscribing = true;
+    async handleTranscriptInRealTime(text, isStreaming = false) {
+        if (!this.isTranscribing || isStreaming) {
+            this.isTranscribing = !isStreaming;
             this.currentTranscript = text;
-            
-            // Process complete transcript
-            await this.handleTranscript(text);
-            this.isTranscribing = false;
+
+            // Add user's speech to chat immediately
+            if (!isStreaming) {
+                await this.addMessage(text, 'user');
+            }
+
+            // Check for chart request and process immediately
+            if (this.isChartRequest(text)) {
+                try {
+                    // First check if there's code in the conversation
+                    let chartCode;
+                    try {
+                        chartCode = this.extractChartCode(text);
+                    } catch (extractError) {
+                        // If no code found in conversation, try to generate it
+                        const response = await fetch(`${this.fastApiUrl}/api/rag/generate-chart`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                            },
+                            credentials: 'include',
+                            body: JSON.stringify({ query: text })
+                        });
+
+                        if (!response.ok) {
+                            if (!isStreaming) {
+                                await this.addMessage("No plotting request has been made yet.", 'bot');
+                            }
+                            return;
+                        }
+
+                        const data = await response.json();
+                        if (!data.code) {
+                            if (!isStreaming) {
+                                await this.addMessage("No plotting request has been made yet.", 'bot');
+                            }
+                            return;
+                        }
+                        chartCode = data.code;
+                    }
+
+                    if (!isStreaming) {
+                        await this.addMessage("Here's the Chart.js code for your request:\n```javascript\n" + 
+                            chartCode + "\n```", 'bot');
+                    }
+
+                    // Create/update chart immediately
+                    try {
+                        if (typeof Chart === 'undefined') {
+                            throw new Error('Chart.js is not loaded.');
+                        }
+
+                        // Update or create chart
+                        if (window.currentChart) {
+                            window.currentChart.destroy();
+                        }
+
+                        const ctx = document.getElementById('myChart').getContext('2d');
+                        const chartConfig = this.parseChartCode(chartCode);
+                        window.currentChart = new Chart(ctx, {
+                            ...chartConfig,
+                            options: {
+                                ...chartConfig.options,
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                animation: {
+                                    duration: isStreaming ? 0 : 1000
+                                }
+                            }
+                        });
+                    } catch (chartError) {
+                        console.error('Error creating chart:', chartError);
+                        if (!isStreaming) {
+                            await this.addMessage("Error: Could not create chart. " + chartError.message, 'bot');
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error handling chart:', error);
+                    if (!isStreaming) {
+                        await this.addMessage("No plotting request has been made yet.", 'bot');
+                    }
+                }
+            }
+
+            // Process normal response only when not streaming
+            if (!isStreaming) {
+                const response = await this.processVoiceMessage(text);
+                await this.addMessage(response, 'bot');
+                this.isTranscribing = false;
+            }
         }
+    }
+
+    createChartContainer() {
+        // Create chart widget container
+        this.chartWidget = document.createElement('div');
+        this.chartWidget.id = 'chartWidget';
+        this.chartWidget.className = 'chart-widget';
+        
+        // Create header with title and minimize button
+        const header = document.createElement('div');
+        header.className = 'chart-header';
+        
+        const title = document.createElement('span');
+        title.textContent = 'Chart Display';
+        
+        const minimizeBtn = document.createElement('button');
+        minimizeBtn.innerHTML = '−';
+        minimizeBtn.className = 'minimize-chart';
+        minimizeBtn.onclick = () => this.toggleChartWidget();
+        
+        header.appendChild(title);
+        header.appendChild(minimizeBtn);
+        
+        // Create canvas for chart
+        const chartContainer = document.createElement('div');
+        chartContainer.className = 'chart-container';
+        
+        const canvas = document.createElement('canvas');
+        canvas.id = 'myChart';
+        
+        chartContainer.appendChild(canvas);
+        
+        // Add resize handle
+        const resizeHandle = document.createElement('div');
+        resizeHandle.className = 'resize-handle';
+        chartContainer.appendChild(resizeHandle);
+        
+        // Assemble widget
+        this.chartWidget.appendChild(header);
+        this.chartWidget.appendChild(chartContainer);
+        
+        // Add to document
+        document.body.appendChild(this.chartWidget);
+        
+        // Make widget draggable
+        this.makeChartWidgetDraggable();
+        // Make widget resizable
+        this.makeChartWidgetResizable();
+    }
+
+    toggleChartWidget() {
+        const container = this.chartWidget.querySelector('.chart-container');
+        const button = this.chartWidget.querySelector('.minimize-chart');
+        
+        if (container.style.display === 'none') {
+            container.style.display = 'block';
+            button.innerHTML = '−';
+        } else {
+            container.style.display = 'none';
+            button.innerHTML = '+';
+        }
+    }
+
+    makeChartWidgetDraggable() {
+        const header = this.chartWidget.querySelector('.chart-header');
+        let isDragging = false;
+        let currentX;
+        let currentY;
+        let initialX;
+        let initialY;
+        let xOffset = 0;
+        let yOffset = 0;
+        
+        header.addEventListener('mousedown', (e) => {
+            initialX = e.clientX - xOffset;
+            initialY = e.clientY - yOffset;
+            
+            if (e.target === header) {
+                isDragging = true;
+            }
+        });
+        
+        document.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                e.preventDefault();
+                
+                currentX = e.clientX - initialX;
+                currentY = e.clientY - initialY;
+                
+                xOffset = currentX;
+                yOffset = currentY;
+                
+                this.chartWidget.style.transform = 
+                    `translate(${currentX}px, ${currentY}px)`;
+            }
+        });
+        
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+    }
+
+    makeChartWidgetResizable() {
+        const resizeHandle = this.chartWidget.querySelector('.resize-handle');
+        let isResizing = false;
+        let startWidth, startHeight, startX, startY;
+
+        resizeHandle.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            startWidth = this.chartWidget.offsetWidth;
+            startHeight = this.chartWidget.offsetHeight;
+
+            // Add event listeners
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', () => {
+                isResizing = false;
+                document.removeEventListener('mousemove', handleMouseMove);
+            });
+        });
+
+        const handleMouseMove = (e) => {
+            if (!isResizing) return;
+
+            // Calculate new size
+            const newWidth = startWidth + (e.clientX - startX);
+            const newHeight = startHeight + (e.clientY - startY);
+
+            // Apply minimum dimensions
+            this.chartWidget.style.width = `${Math.max(300, newWidth)}px`;
+            this.chartWidget.style.height = `${Math.max(200, newHeight)}px`;
+
+            // If there's an active chart, update its size
+            if (window.currentChart) {
+                window.currentChart.resize();
+            }
+        };
     }
 }
 // Initialize chatbot when document loads

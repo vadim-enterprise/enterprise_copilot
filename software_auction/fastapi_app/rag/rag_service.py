@@ -1,7 +1,7 @@
 import logging
 from .hybrid_rag import HybridRAG, KNOWLEDGE_BASE_DIR
 from django.http import JsonResponse
-from ..services.websearch_service import WebSearchService as WebSearcher
+from ..services.context_service import ContextService
 import time
 import uuid
 import os
@@ -28,6 +28,7 @@ class RAGService:
         self.data_dir = KNOWLEDGE_BASE_DIR
         self.data_dir.mkdir(parents=True, exist_ok=True)
         logger.info(f"RAG Service using knowledge base directory: {self.data_dir}")
+        self.context_service = ContextService()
 
     def add_to_history(self, user_input, bot_response):
         """Add the latest user input and bot response to the conversation history."""
@@ -76,7 +77,6 @@ class RAGService:
             
             # Initialize services at the start
             knowledge_service = KnowledgeService()
-            web_searcher = WebSearcher()
             
             # Path to text.txt and questions.txt
             text_path = base_dir / 'text.txt'
@@ -171,7 +171,7 @@ class RAGService:
                         logger.info(f"Processing question: {question}")
                         
                         # Get search results
-                        search_results = web_searcher.search_and_process(question, filter_context=True)
+                        search_results = knowledge_service.search_and_process(question, filter_context=True)
                         logger.info(f"Found {len(search_results)} results for question: {question}")
                         
                         # Process and add search results to knowledge base

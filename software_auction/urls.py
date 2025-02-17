@@ -19,7 +19,6 @@ urlpatterns = [
     path('reset-conversation/', views.reset_conversation, name='reset_conversation'),
     path('health-check/', views.health_check, name='health_check'),
     path('generate-analysis-instructions/', views.generate_analysis_instructions, name='generate_analysis_instructions'),
-    path('generate-speech/', views.handle_tts_request, name='generate_speech'),
     path('transcribe-speech/', views.handle_transcription_request, name='transcribe_speech'),
 ]
 

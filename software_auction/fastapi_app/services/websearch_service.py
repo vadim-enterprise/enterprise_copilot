@@ -10,7 +10,8 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
 from django.conf import settings
 from ..models.search_types import ModelChoice
-from .search_utils import get_context_embedding
+from .context_service import ContextService
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,8 @@ class WebSearchService:
         self.search_results_cache = {}
         self.cache_expiry = settings.CACHE_EXPIRATION
         self.model_choice = model_choice
+        self.context_service = ContextService()
+        self.knowledge_base_path = os.path.join(settings.BASE_DIR, 'software_auction/knowledge_base/data')
         
         if model_choice == ModelChoice.OPENAI:
             self.openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
@@ -32,6 +35,20 @@ class WebSearchService:
                 torch_dtype=torch.float16,
                 device_map="auto"
             )
+
+    def get_context_embedding(self, text: str) -> Dict[str, Any]:
+        """Get embedding for context text with context from knowledge base"""
+        try:
+            # Get context from text file
+            text_file_path = os.path.join(self.knowledge_base_path, 'text.txt')
+            with open(text_file_path, 'r') as f:
+                context_docs = [f.read()]
+                logger.info("context_docs: %s", context_docs)
+            
+            return self.context_service.get_context_embedding(text, context_docs)
+        except Exception as e:
+            logger.error(f"Error getting embedding: {str(e)}")
+            return None
 
     def search_and_process(self, query: str, filter_context: bool = True, num_results: int = 10) -> List[Dict[str, Any]]:
         """
@@ -53,45 +70,42 @@ class WebSearchService:
             candidate_results = []  # Store all potentially good results
             
             if filter_context:
-                context_embedding = get_context_embedding(self.openai_client, query)
+                context_embedding = self.get_context_embedding(query)
                 
-                if context_embedding and isinstance(context_embedding, dict) and 'documents' in context_embedding:
-                    # Generate context embedding once
-                    context_text = ' '.join(context_embedding['documents'][0][:10])  # Combine top 3 documents
-                    
-                    # Extract key concepts and terms from context
-                    concept_prompt = f"""
-                    Analyze this text and extract:
-                    1. Main topics and concepts (3-4 key phrases)
-                    2. Technical terms or jargon
-                    3. Important names, organizations, or entities
-                    4. Specific details that should be matched in search results
+                if not context_embedding:
+                    logger.warning("No context embedding found")
+                    return []
+                
+                # Generate context embedding once
+                context_text = ' '.join(context_embedding['documents'][0][:10])  # Combine top 3 documents
+                
+                # Extract key concepts and terms from context
+                concept_prompt = f"""
+                Analyze this text and extract:
+                1. Main topics and concepts (3-4 key phrases)
+                2. Technical terms or jargon
+                3. Important names, organizations, or entities
+                4. Specific details that should be matched in search results
 
-                    Text: {context_text}
+                Text: {context_text}
 
-                    Format the response as a list of search-optimized terms and phrases.
-                    """
-                    
-                    concept_response = self.openai_client.chat.completions.create(
-                        model=settings.GPT_MODEL_NAME,
-                        messages=[{"role": "user", "content": concept_prompt}],
-                        temperature=settings.DEFAULT_TEMPERATURE,
-                        max_tokens=150
-                    )
-                    
-                    search_terms = concept_response.choices[0].message.content
-                    logger.info(f"Extracted search terms: {search_terms}")
-                    
-                    # Create a more focused search query
-                    enhanced_query = f'"{query}" ({search_terms})'
-                    logger.info(f"Enhanced search query: {enhanced_query}")
-                    
-                    # Generate embedding for similarity comparison
-                    context_embedding = self.openai_client.embeddings.create(
-                        input=context_text,
-                        model=settings.EMBEDDING_MODEL_NAME
-                    ).data[0].embedding
-
+                Format the response as a list of search-optimized terms and phrases.
+                """
+                
+                concept_response = self.openai_client.chat.completions.create(
+                    model=settings.GPT_MODEL_NAME,
+                    messages=[{"role": "user", "content": concept_prompt}],
+                    temperature=settings.DEFAULT_TEMPERATURE,
+                    max_tokens=150
+                )
+                
+                search_terms = concept_response.choices[0].message.content
+                logger.info(f"Extracted search terms: {search_terms}")
+                
+                # Create a more focused search query
+                enhanced_query = f'"{query}" ({search_terms})'
+                logger.info(f"Enhanced search query: {enhanced_query}")
+                
             page = 1
             max_attempts = 10  # Maximum number of search pages to try
             consecutive_empty_pages = 0  # Track pages without valid results
@@ -108,7 +122,7 @@ class WebSearchService:
                     'key': GOOGLE_API_KEY,
                     'cx': SEARCH_ENGINE_ID,
                     'q': enhanced_query,
-                    'num': 3,
+                    'num': 10,
                     'start': ((page - 1) * 10) + 1,
                     'fields': 'items(title,link,snippet)',
                     'prettyPrint': False,
@@ -126,37 +140,77 @@ class WebSearchService:
 
                 results = response.json()
                 
+                if not isinstance(results, dict):
+                    logger.error(f"Results is not a dictionary: {type(results)}")
+                    continue
+                
                 if 'items' not in results:
-                    logger.warning(f"No items in search results for page {page}")
+                    logger.info(f"No items in search results for page {page}")
                     page += 1
                     consecutive_empty_pages += 1
+                    continue
+
+                items = results.get('items', [])
+                if not isinstance(items, list):
+                    logger.error(f"Items is not a list: {type(items)}")
                     continue
 
                 found_valid_result = False
                 
                 # Process results one at a time
-                for item in results['items']:
+                for item in items:
                     try:
+                        # Ensure we have valid item data
+                        if not isinstance(item, dict):
+                            logger.warning(f"Invalid item format: {item}")
+                            continue
+
                         result = {
-                            'url': item.get('link', ''),
-                            'title': item.get('title', ''),
-                            'summary': item.get('snippet', ''),
+                            'url': str(item.get('link', '')),
+                            'title': str(item.get('title', '')),
+                            'summary': str(item.get('snippet', '')),
                             'timestamp': time.strftime('%Y-%m-%d'),
                             'source': 'google_search'
                         }
                         
                         if not (result['url'] and result['title'] and result['summary']):
+                            logger.warning("Missing required fields in search result")
                             continue
 
-                        # Check similarity if context is available
+                        # Calculate similarity if context is available
                         if filter_context and context_embedding:
                             result_text = f"{result['title']}\n{result['summary']}"
-                            result_embedding = self.openai_client.embeddings.create(
-                                input=result_text,
-                                model=settings.EMBEDDING_MODEL_NAME
-                            ).data[0].embedding
+                            try:
+                                # Get embedding for result text
+                                response = self.openai_client.embeddings.create(
+                                    input=result_text,
+                                    model=settings.EMBEDDING_MODEL_NAME
+                                )
+                                
+                                # Access the embedding from the response
+                                if not response or not response.data or not response.data[0]:
+                                    logger.warning(f"No valid embedding response for result: {result['title']}")
+                                    continue
+                                
+                                result_embedding = response.data[0].embedding
+                            except Exception as embed_error:
+                                logger.error(f"Error getting embedding for result: {str(embed_error)}")
+                                continue
                             
-                            similarity = self._calculate_cosine_similarity(context_embedding, result_embedding)
+                            if not result_embedding:
+                                logger.warning(f"No embedding generated for result: {result['title']}")
+                                continue
+                            
+                            context_embedding_vector = context_embedding['embedding']
+                            if not context_embedding_vector:
+                                logger.warning("No embedding vector in context")
+                                continue
+                            
+                            if not isinstance(result_embedding, (list, np.ndarray)):
+                                logger.warning(f"Invalid result embedding type: {type(result_embedding)}")
+                                continue
+                            
+                            similarity = self._calculate_cosine_similarity(context_embedding_vector, result_embedding)
                             logger.info(f"Similarity score for {result['title']}: {similarity}")
                             
                             if similarity <= settings.MIN_SIMILARITY_SCORE:
@@ -231,9 +285,28 @@ class WebSearchService:
         """Calculate cosine similarity between two embeddings"""
         try:
             import numpy as np
-            a = np.array(embedding1)
-            b = np.array(embedding2)
-            return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b)))
+            # Convert embeddings to numpy arrays if they aren't already
+            if not isinstance(embedding1, np.ndarray):
+                embedding1 = np.array(embedding1)
+            if not isinstance(embedding2, np.ndarray):
+                embedding2 = np.array(embedding2)
+            
+            # Ensure embeddings are 1D arrays
+            embedding1 = embedding1.flatten()
+            embedding2 = embedding2.flatten()
+            
+            # Check if embeddings are valid
+            if embedding1.size == 0 or embedding2.size == 0:
+                logger.error("Empty embedding detected")
+                return 0.0
+            
+            if embedding1.size != embedding2.size:
+                logger.error(f"Embedding dimensions don't match: {embedding1.size} vs {embedding2.size}")
+                return 0.0
+
+            # Calculate similarity
+            similarity = np.dot(embedding1, embedding2) / (np.linalg.norm(embedding1) * np.linalg.norm(embedding2))
+            return float(similarity)
         except Exception as e:
             logger.error(f"Error calculating similarity: {str(e)}")
             return 0.0

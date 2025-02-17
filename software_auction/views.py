@@ -22,7 +22,6 @@ from django.middleware.csrf import get_token
 import io
 import ffmpeg
 from .services.analysis_service import AnalysisService
-from software_auction.fastapi_app.services.tts_service import TTSService
 from software_auction.fastapi_app.services.transcription_service import TranscriptionService
 import uuid
 
@@ -36,7 +35,6 @@ KNOWLEDGE_BASE_DIR = os.path.join(
 
 # Add to existing imports
 analysis_service = AnalysisService()
-tts_service = TTSService()
 transcription_service = TranscriptionService()
 
 @never_cache  # Add this decorator
@@ -367,22 +365,6 @@ def generate_analysis_instructions(request):
             'status': 'error',
             'error': str(e)
         }, status=500)
-
-def handle_tts_request(request):
-    # Logic to handle TTS request
-    text = request.POST.get('text')
-    voice = request.POST.get('voice', 'alloy')
-
-    if not text:
-        return JsonResponse({'status': 'error', 'message': 'Text is required.'}, status=422)
-
-    # Optional: Validate voice parameter if you have specific allowed values
-    allowed_voices = ['alloy', 'other_voice']  # Add your allowed voices here
-    if voice not in allowed_voices:
-        return JsonResponse({'status': 'error', 'message': 'Invalid voice specified.'}, status=422)
-
-    result = tts_service.generate_speech(text, voice)
-    return JsonResponse(result)
 
 def handle_transcription_request(request):
     # Logic to handle transcription request

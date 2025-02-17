@@ -1,9 +1,19 @@
 from fastapi import APIRouter, Request, HTTPException
 from ..rag.rag_service import RAGService
 import logging
+from pydantic import BaseModel
+from typing import Optional, List
+import re
 
 rag_router = APIRouter()
 logger = logging.getLogger(__name__)
+
+class QueryRequest(BaseModel):
+    query: str
+
+class ChartResponse(BaseModel):
+    code: str
+    status: str = "success"
 
 @rag_router.post("/text_query")
 async def text_query(request: Request):
@@ -64,3 +74,26 @@ async def add_to_kb(request: Request):
             "status": "error",
             "message": str(e)
         }
+
+@rag_router.post("/generate-chart", response_model=ChartResponse)
+async def generate_chart(request: QueryRequest):
+    """Extract Chart.js code from the transcribed text"""
+    try:
+        query = request.query.lower()
+        
+        # Look for code block in the transcribed text
+        code_match = re.search(r'```javascript\n([\s\S]*?)\n```', query)
+        if not code_match:
+            return ChartResponse(
+                status="error",
+                code=""
+            )
+        
+        # Extract and return the actual code
+        extracted_code = code_match.group(1).strip()
+        return ChartResponse(
+            status="success",
+            code=extracted_code
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
