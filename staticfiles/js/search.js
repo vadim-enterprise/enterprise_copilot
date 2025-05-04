@@ -1,3 +1,25 @@
+class Logger {
+    constructor(moduleName) {
+        this.moduleName = moduleName;
+    }
+
+    info(message) {
+        console.log(`[${this.moduleName}] INFO: ${message}`);
+    }
+
+    error(message) {
+        console.error(`[${this.moduleName}] ERROR: ${message}`);
+    }
+
+    warn(message) {
+        console.warn(`[${this.moduleName}] WARN: ${message}`);
+    }
+
+    debug(message) {
+        console.debug(`[${this.moduleName}] DEBUG: ${message}`);
+    }
+}
+
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
@@ -113,24 +135,14 @@ async function addToKnowledgeBase(result) {
 
 class WebSearch {
     constructor() {
+        this.baseUrl = 'http://127.0.0.1:8001/api';
+        this.chatEndpoint = '/chat/query';
+        this.websearchEndpoint = '/websearch/search';
+        this.logger = new Logger('WebSearch');
         this.searchInput = document.getElementById('webSearchInput');
         this.searchButton = document.getElementById('webSearchButton');
-        // Create results container if it doesn't exist
-        this.resultsContainer = document.querySelector('.search-results') || (() => {
-            const container = document.createElement('div');
-            container.className = 'search-results';
-            document.querySelector('.search-container').appendChild(container);
-            return container;
-        })();
-        
-        this.fastApiUrl = 'http://127.0.0.1:8001';
-        this.serverAvailable = false;
-        
-        // Add reference to search button icon
-        this.searchIcon = this.searchButton.querySelector('.search-icon');
-        
+        this.resultsWindow = document.getElementById('searchResultsWindow');
         this.setupEventListeners();
-        this.checkServer();
     }
 
     setupEventListeners() {
@@ -147,149 +159,148 @@ class WebSearch {
                 this.performSearch();
             }
         });
-
-        // Add input event listener to enable/disable button
-        this.searchInput.addEventListener('input', () => {
-            this.searchButton.disabled = !this.searchInput.value.trim();
-        });
-    }
-
-    async checkServer() {
-        try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-            // Update the URL to include /api/ prefix
-            const response = await fetch(`${this.fastApiUrl}/api/health-check`, {
-                signal: controller.signal
-            });
-            
-            clearTimeout(timeoutId);
-
-            if (response.ok) {
-                const data = await response.json();
-                this.serverAvailable = data.status === 'ok';
-                console.log('Search server status:', data);
-                
-                if (!this.serverAvailable) {
-                    this.showError('Some services may be unavailable');
-                }
-            } else {
-                throw new Error(`Server responded with status: ${response.status}`);
-            }
-        } catch (error) {
-            if (error.name === 'AbortError') {
-                console.error('Server check timed out');
-                throw new Error('Server check timed out');
-            }
-            console.error('Search server is not available:', error);
-            this.showError('Search service is currently unavailable. Please try again later.');
-            this.serverAvailable = false;
-        }
     }
 
     async performSearch() {
         const query = this.searchInput.value.trim();
         if (!query) return;
 
-        if (!this.serverAvailable) {
-            this.showError('Search service is currently unavailable. Please ensure the server is running.');
-            return;
-        }
-
         try {
-            // Show loading state
-            this.searchButton.classList.add('loading');
             this.showLoadingState();
-
-            console.log('Performing web search with query:', query);
-
-            const response = await fetch(`${this.fastApiUrl}/api/websearch/search`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ query })
+            
+            // First try to get response from ChatGPT
+            const chatResponse = await this._callChatAPI(query);
+            this.logger.info(`ChatGPT response received: ${chatResponse.response.substring(0, 100)}...`);
+            
+            // Display the chat response
+            this.displayResults({
+                chat_response: chatResponse.response,
+                web_results: []
             });
-
-            const data = await response.json();
             
-            // Clear previous results
-            this.resultsContainer.innerHTML = '';
-            
-            if (data.status === 'success' && data.results && data.results.length > 0) {
-                const resultsHeader = document.createElement('h2');
-                resultsHeader.className = 'results-header';
-                resultsHeader.textContent = `Search Results for "${query}"`;
-                this.resultsContainer.appendChild(resultsHeader);
+            // If web search was used or needed, perform web search
+            if (chatResponse.used_web_search) {
+                this.logger.info('Performing web search...');
+                const webSearchResults = await this._callWebSearchAPI(query);
+                this.logger.info(`Web search results received: ${webSearchResults.results.length} results`);
                 
-                data.results.forEach(result => {
-                    const resultElement = document.createElement('div');
-                    resultElement.className = 'search-result-item';
-                    resultElement.innerHTML = `
-                        <button class="add-to-kb" onclick="addToKnowledgeBase('${encodeURIComponent(JSON.stringify(result))}')">
-                            <span class="kb-icon">📚</span>
-                            Add to KB
-                        </button>
-                        <div class="search-result-title">
-                            <a href="${result.link}" target="_blank">${result.title}</a>
-                        </div>
-                        <div class="search-result-description">${result.snippet}</div>
-                    `;
-                    this.resultsContainer.appendChild(resultElement);
+                // Update the display with web search results
+                this.displayResults({
+                    chat_response: chatResponse.response,
+                    web_results: webSearchResults.results
                 });
-            } else {
-                this.resultsContainer.innerHTML = '<div class="no-results">No results found</div>';
             }
-            this.resultsContainer.classList.add('active');
             
-            // Make results visible with animation
-            setTimeout(() => {
-                this.resultsContainer.classList.add('visible');
-            }, 100);
-
         } catch (error) {
-            console.error('Search error:', error);
-            this.showError(error.message || 'Failed to perform search. Please try again later.');
-            this.resultsContainer.innerHTML = '<div class="error-message">Error performing search</div>';
-            this.resultsContainer.classList.add('active');
+            this.logger.error(`Search error: ${error}`);
+            this.showError('Failed to perform search. Please try again.');
         } finally {
-            // Hide loading states
-            this.searchButton.classList.remove('loading');
             this.hideLoadingState();
         }
     }
 
-    showLoadingState() {
-        this.resultsContainer.classList.remove('visible');
-        this.resultsContainer.innerHTML = `
-            <div class="loading-indicator">
-                <div class="spinner"></div>
-                <span>Searching...</span>
-            </div>
+    displayResults(data) {
+        this.resultsWindow.innerHTML = '';
+        
+        // Display ChatGPT response
+        const chatResponseElement = document.createElement('div');
+        chatResponseElement.className = 'result-item chat-response';
+        chatResponseElement.innerHTML = `
+            <div class="result-title">AI Response</div>
+            <div class="result-description">${data.chat_response}</div>
         `;
-        // Trigger reflow and show loading indicator
-        void this.resultsContainer.offsetWidth;
-        this.resultsContainer.classList.add('visible');
+        this.resultsWindow.appendChild(chatResponseElement);
+        
+        // If there are web search results, display them
+        if (data.web_results && data.web_results.length > 0) {
+            const webResultsTitle = document.createElement('div');
+            webResultsTitle.className = 'result-title web-results-title';
+            webResultsTitle.textContent = 'Web Search Results';
+            this.resultsWindow.appendChild(webResultsTitle);
+            
+            data.web_results.forEach(result => {
+                const resultElement = document.createElement('div');
+                resultElement.className = 'result-item web-result';
+                resultElement.innerHTML = `
+                    <div class="result-title">${result.title}</div>
+                    <div class="result-description">${result.snippet}</div>
+                    <a href="${result.link}" class="result-link" target="_blank">Read more</a>
+                `;
+                this.resultsWindow.appendChild(resultElement);
+            });
+        }
+
+        this.resultsWindow.classList.add('active');
+    }
+
+    showLoadingState() {
+        this.searchButton.classList.add('loading');
+        this.resultsWindow.innerHTML = '<div class="result-item">Analyzing your query...</div>';
+        this.resultsWindow.classList.add('active');
     }
 
     hideLoadingState() {
-        const loading = this.resultsContainer.querySelector('.loading-indicator');
-        if (loading) {
-            this.resultsContainer.classList.remove('visible');
-            setTimeout(() => {
-                loading.remove();
-            }, 300); // Match the CSS transition duration
-        }
+        this.searchButton.classList.remove('loading');
     }
 
     showError(message) {
-        this.resultsContainer.innerHTML = `
-            <div class="error-message">
-                <p>🚫 ${message}</p>
-                <p>Please try again later.</p>
-            </div>
-        `;
+        this.resultsWindow.innerHTML = `<div class="result-item error">${message}</div>`;
+        this.resultsWindow.classList.add('active');
+    }
+
+    async _callChatAPI(query) {
+        try {
+            this.logger.info(`Calling chat API with query: ${query}`);
+            
+            const response = await fetch(`${this.baseUrl}${this.chatEndpoint}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    query: query,
+                    use_web_search: false
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`Chat API error! status: ${response.status}, detail: ${errorData.detail || 'Unknown error'}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            this.logger.error(`Error calling chat API: ${error}`);
+            throw error;
+        }
+    }
+
+    async _callWebSearchAPI(query) {
+        try {
+            this.logger.info(`Calling web search API with query: ${query}`);
+            
+            const response = await fetch(`${this.baseUrl}${this.websearchEndpoint}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    query: query
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`Web search API error! status: ${response.status}, detail: ${errorData.detail || 'Unknown error'}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            this.logger.error(`Error calling web search API: ${error}`);
+            throw error;
+        }
     }
 }
 
@@ -303,7 +314,56 @@ function showNotification(message, type = 'info') {
     setTimeout(() => notification.remove(), 3000);
 }
 
-// Initialize web search when document loads
+// Initialize WebSearch when the page loads
 document.addEventListener('DOMContentLoaded', () => {
-    new WebSearch();
-}); 
+    window.webSearch = new WebSearch();
+});
+
+async function performSearch(query) {
+    try {
+        const response = await fetch('/api/search', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ query })
+        });
+        
+        const data = await response.json();
+        
+        if (data.type === 'combined') {
+            // Display the AI's combined analysis
+            const resultsWindow = document.getElementById('searchResultsWindow');
+            resultsWindow.innerHTML = `
+                <div class="alert alert-info">
+                    <h6>Analysis Context:</h6>
+                    <p>Using ${data.context.total_datasets} available datasets</p>
+                </div>
+                <div class="mt-3">
+                    <h6>Comprehensive Answer:</h6>
+                    <p>${data.answer.replace(/\n/g, '<br>')}</p>
+                </div>
+                <div class="mt-3">
+                    <h6>Web Search Results:</h6>
+                    ${data.web_results.map(result => `
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title">${result.title}</h5>
+                                <p class="card-text">${result.snippet}</p>
+                                <a href="${result.link}" class="btn btn-primary" target="_blank">Visit Source</a>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Search error:', error);
+        const resultsWindow = document.getElementById('searchResultsWindow');
+        resultsWindow.innerHTML = `
+            <div class="alert alert-danger">
+                Error: ${error.message}
+            </div>
+        `;
+    }
+} 

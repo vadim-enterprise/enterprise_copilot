@@ -1,47 +1,77 @@
+import os
+import sys
+from pathlib import Path
+
+# Load environment variables
+from software_auction.fastapi_app.utils.env_loader import load_env_variables
+load_env_variables()
+
+# Setup Django environment
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(BASE_DIR))
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'django_project.settings')
+
+import django
+django.setup()
+
+# Now import FastAPI and other dependencies
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import JSONResponse
-from pathlib import Path
-from PyPDF2 import PdfReader
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.templating import Jinja2Templates
 from .routers import websearch_router
 from .routers.speech_router import router as speech_router
 from .services.websearch_service import WebSearchService
-from .rag.hybrid_rag import HybridRAG
-from .rag.rag_service import RAGService
 import logging
-import os
-import aiohttp
 from typing import Dict, Any
 import json
 import time
-
-# Define allowed origins
-ALLOWED_ORIGINS = [
-    "http://localhost:8000",
-    "http://127.0.0.1:8000",
-    "http://localhost:8001",
-    "http://127.0.0.1:8001"
-]
+from openai import OpenAI
+from .api import chat, files
+from .settings import ALLOWED_ORIGINS, HOST, PORT
 
 # Create a router for speech-related endpoints
 from fastapi import APIRouter
 rag_router = APIRouter()
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    stream=sys.stdout
+)
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
-hybrid_rag = HybridRAG()
+
+# Initialize OpenAI client
+openai_client = OpenAI()
+
+# Include routers
+app.include_router(websearch_router.router, prefix="/api/websearch", tags=["websearch"])
+app.include_router(speech_router, prefix="/api/speech", tags=["speech"])
+app.include_router(rag_router, prefix="/api/rag", tags=["rag"])
+app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
+app.include_router(files.router, prefix="/api/files", tags=["files"])
 
 # RAG endpoints
 @rag_router.post("/enrich")
 async def enrich_knowledge_base(request: Request):
     """Handle knowledge base enrichment request"""
-    data = await request.json()
-    result = RAGService.handle_enrich_knowledge_base(data)
-    return result
+    try:
+        data = await request.json()
+        logger.info(f"Would have enriched knowledge base with: {data}")
+        return {
+            "status": "success",
+            "message": "Knowledge base enrichment functionality removed"
+        }
+    except Exception as e:
+        logger.error(f"Error in enrich_knowledge_base: {str(e)}")
+        return {
+            "status": "error",
+            "message": str(e)
+        }
 
 @rag_router.options("/text_query")
 async def text_query_options():
@@ -67,23 +97,21 @@ async def text_query(request: Request):
         if not isinstance(data.get('query'), str):
             raise HTTPException(status_code=400, detail="Query must be a string")
         
-        result = RAGService.handle_text_query(data)
-        logger.info(f"RAG service response: {result}")
+        # Use OpenAI directly
+        response = openai_client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": data['query']}],
+            temperature=0.7,
+            max_tokens=500
+        )
         
-        if not result:
-            raise HTTPException(status_code=500, detail="No response from RAG service")
+        if not response or not response.choices:
+            raise HTTPException(status_code=500, detail="No response from OpenAI")
         
-        # Format response as a simple string if it's not already
-        if isinstance(result, dict):
-            response_content = {
-                "status": "success",
-                "response": result.get("response", str(result))
-            }
-        else:
-            response_content = {
-                "status": "success",
-                "response": str(result)
-            }
+        response_content = {
+            "status": "success",
+            "response": response.choices[0].message.content
+        }
 
         return JSONResponse(
             content=response_content,
@@ -140,13 +168,12 @@ async def get_text_instructions():
         logger.exception("Full traceback:")
         raise HTTPException(status_code=500, detail=str(e))
 
-# Ensure media directory exists
-MEDIA_DIR = Path(__file__).resolve().parent.parent.parent / 'media'
-MEDIA_DIR.mkdir(parents=True, exist_ok=True)
-logger.info(f"Media directory: {MEDIA_DIR}")
-
 # Mount static files
-app.mount("/media", StaticFiles(directory=str(MEDIA_DIR)), name="media")
+media_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "media")
+os.makedirs(media_dir, exist_ok=True)
+logger.info(f"Media directory: {media_dir}")
+
+app.mount("/media", StaticFiles(directory=media_dir), name="media")
 
 # Configure CORS middleware
 app.add_middleware(
@@ -290,77 +317,10 @@ async def create_session(config: str = None):
         logger.error(f"Error creating session: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@rag_router.post("/query")
-async def query_rag(request: Request):
-    """Query the RAG system"""
-    try:
-        data = await request.json()
-        query = data.get("query")
-        if not query:
-            raise HTTPException(status_code=400, detail="Query is required")
-            
-        context = hybrid_rag.get_factual_context(query)
-        response = hybrid_rag.generate_response(query, context=context)
-        
-        return {
-            "status": "success",
-            "response": response,
-            "context_used": context,
-            "sources": [s.get('source') for s in hybrid_rag.last_query_metadata.get('metadata', [])]
-        }
-    except Exception as e:
-        logger.error(f"Error querying RAG: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@rag_router.post("/voice_query")
-async def voice_query_rag(request: Request):
-    """Enhanced RAG query for voice interactions"""
-    try:
-        data = await request.json()
-        query = data.get("query")
-        is_user_input = data.get("is_user_input", True)
-        conversation_history = data.get("conversation_history", [])
-        
-        if not query:
-            raise HTTPException(status_code=400, detail="Query is required")
-        
-        # Get context from knowledge base
-        context = await hybrid_rag.get_context(query)
-        
-        # If this is user input, potentially add to knowledge base
-        if is_user_input:
-            # Extract potential new knowledge
-            new_knowledge = await hybrid_rag.extract_knowledge(
-                query, 
-                conversation_history
-            )
-            
-            if new_knowledge:
-                # Add to knowledge base if it's new information
-                await hybrid_rag.add_to_knowledge_base({
-                    "content": new_knowledge,
-                    "metadata": {
-                        "source": "voice_interaction",
-                        "timestamp": time.time(),
-                        "type": "learned"
-                    }
-                })
-        
-        return {
-            "status": "success",
-            "context": context,
-            "knowledge_added": bool(new_knowledge) if is_user_input else False
-        }
-        
-    except Exception as e:
-        logger.error(f"Error in voice RAG query: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
 @app.on_event("startup")
 async def startup_event():
-    logger.info("FastAPI server starting up...")
-    logger.info(f"Media directory: {MEDIA_DIR}")
-    logger.info("Server configuration complete")
+    logger.info("Starting FastAPI server...")
+    logger.info("Chat, Speech, RAG, and File upload endpoints are available")
 
 @app.get("/")
 async def root():
@@ -369,29 +329,19 @@ async def root():
 
 @app.get("/api/health-check")
 async def health_check():
-    """Root endpoint for health checking"""
     return {
         "status": "ok",
-        "message": "FastAPI server is running",
         "services": {
-            "search": "available",
+            "chat": "available",
             "speech": "available",
+            "files": "available"
         }
     }
-
-# Include routers - moved after endpoint definitions
-app.include_router(websearch_router.router, prefix="/api/websearch", tags=["websearch"])
-app.include_router(speech_router, prefix="/api/speech", tags=["speech"])
-app.include_router(rag_router, prefix="/api/rag", tags=["rag"])
-
-
-
 
 # User speaks → chatbot.js → speech_manager.js → 
 # FastAPI main.py → speech_router.py → 
 # Process → Response → 
 # main.py → speech_manager.js → chatbot.js → User hears response
-
 
 # graph TD
 #     A[User Speaks] --> B[chatbot.js]
@@ -401,3 +351,30 @@ app.include_router(rag_router, prefix="/api/rag", tags=["rag"])
 #     E -- Transcript --> D
 #     D -- JSON Response --> C
 #     C --> B[Display Text]
+
+# Mount static files
+static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+# Templates
+templates = Jinja2Templates(directory=os.path.join(static_dir, "html"))
+
+@app.get("/")
+async def root():
+    return FileResponse(os.path.join(static_dir, "html", "index.html"))
+
+@app.get("/api/health-check")
+async def health_check():
+    return {
+        "status": "ok",
+        "services": {
+            "chat": "available",
+            "speech": "available",
+            "files": "available"
+        }
+    }
+
+@app.on_event("startup")
+async def startup_event():
+    logger.info("Starting FastAPI server...")
+    logger.info("Chat, Speech, RAG, and File upload endpoints are available")

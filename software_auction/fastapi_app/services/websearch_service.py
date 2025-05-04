@@ -6,35 +6,25 @@ from urllib.parse import urlparse
 from openai import OpenAI
 import os
 import logging
-from transformers import AutoTokenizer, AutoModelForCausalLM
-import torch
 from django.conf import settings
-from ..models.search_types import ModelChoice
 from .context_service import ContextService
 import numpy as np
+from dotenv import load_dotenv
+from bs4 import BeautifulSoup
+
+# Load environment variables
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
 class WebSearchService:
-    def __init__(self, model_choice: ModelChoice = ModelChoice.OPENAI):
+    def __init__(self):
         self.robot_parsers = {}
         self.search_results_cache = {}
         self.cache_expiry = settings.CACHE_EXPIRATION
-        self.model_choice = model_choice
         self.context_service = ContextService()
         self.knowledge_base_path = os.path.join(settings.BASE_DIR, 'software_auction/knowledge_base/data')
-        
-        if model_choice == ModelChoice.OPENAI:
-            self.openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-        else:
-            self.openai_client = None
-            model_name = "meta-llama/Llama-2-7b-chat-hf"
-            self.llama_tokenizer = AutoTokenizer.from_pretrained(model_name)
-            self.llama_model = AutoModelForCausalLM.from_pretrained(
-                model_name,
-                torch_dtype=torch.float16,
-                device_map="auto"
-            )
+        self.openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
     def get_context_embedding(self, text: str) -> Dict[str, Any]:
         """Get embedding for context text with context from knowledge base"""
@@ -310,3 +300,27 @@ class WebSearchService:
         except Exception as e:
             logger.error(f"Error calculating similarity: {str(e)}")
             return 0.0
+
+    async def search(self, query: str) -> List[Dict[str, str]]:
+        try:
+            logger.info(f"Performing web search for: {query}")
+            # This is a placeholder implementation
+            # In a real application, you would use a proper search API like Google Custom Search
+            # or implement your own web scraping logic
+            
+            # For now, return some dummy results
+            return [
+                {
+                    "title": "Example Result 1",
+                    "snippet": "This is an example search result snippet.",
+                    "link": "https://example.com/1"
+                },
+                {
+                    "title": "Example Result 2",
+                    "snippet": "Another example search result snippet.",
+                    "link": "https://example.com/2"
+                }
+            ]
+        except Exception as e:
+            logger.error(f"Error performing web search: {str(e)}")
+            raise Exception(f"Error performing web search: {str(e)}")

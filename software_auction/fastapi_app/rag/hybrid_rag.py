@@ -2,18 +2,15 @@ import os
 from typing import Dict, List, Any
 import logging
 from openai import OpenAI
-import chromadb
-from transformers import AutoTokenizer, AutoModelForCausalLM
-import torch
 import json
 import time
 import uuid
 import glob
-from ..models.search_types import ModelChoice
 from django.conf import settings
-from chromadb.config import Settings
-from chromadb.utils import embedding_functions
 from pathlib import Path
+from ..models import Document
+from django.db.models import F
+from pgvector.django import L2Distance
 
 logger = logging.getLogger(__name__)
 MODEL_CHOICE = "openai"
@@ -22,7 +19,6 @@ KNOWLEDGE_BASE_DIR = Path(__file__).resolve().parent.parent.parent / 'knowledge_
 class HybridRAG:
     def __init__(self):
         """Initialize the RAG system"""
-        self.model_choice = settings.AI_MODEL_CONFIG.get('USE_LLAMA', False)
         self.model_name = settings.AI_MODEL_CONFIG.get('OPENAI_MODEL', 'gpt-4')
         self.temperature = settings.AI_MODEL_CONFIG.get('TEMPERATURE', 0.7)
         
@@ -33,32 +29,14 @@ class HybridRAG:
         # Initialize OpenAI client
         self.openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
         
-        # Set up paths
-        self.base_dir = Path(__file__).resolve().parent.parent.parent
-        self.persist_directory = str(self.base_dir / 'data' / 'chroma_db')
-        
-        # Create directory if it doesn't exist
-        Path(self.persist_directory).mkdir(parents=True, exist_ok=True)
-        
-        # Initialize ChromaDB client
-        self.chroma_client = chromadb.PersistentClient(
-            path=self.persist_directory
-        )
-        
-        # Initialize or get collection
-        self._initialize_empty_collection()
-        
         # Store last query metadata
         self.last_query_metadata = {}
         
         # Load initial knowledge base
         self._load_knowledge_base()
 
-    def generate_response(self, prompt: str, context: str = None, use_llama: bool = None) -> str:
+    def generate_response(self, prompt: str, context: str = None) -> str:
         """Generate response using configured model"""
-        # Use parameter if provided, otherwise use settings default
-        use_llama = use_llama if use_llama is not None else self.model_choice
-        
         try:
             system_prompt = """You are an AI assistant helping with data analysis and insights.
             Use the provided context to generate relevant and accurate responses."""
@@ -68,115 +46,30 @@ class HybridRAG:
             else:
                 user_prompt = prompt
 
-            if use_llama:
-                combined_prompt = f"{system_prompt}\n\nUser: {user_prompt}\nAssistant:"
-                return self.get_llama_response(combined_prompt)
-            else:
-                messages = [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ]
-                
-                response = self.openai_client.chat.completions.create(
-                    model=self.model_name,
-                    messages=messages,
-                    temperature=self.temperature,
-                    max_tokens=500
-                )
-                
-                return response.choices[0].message.content.strip()
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ]
+            
+            response = self.openai_client.chat.completions.create(
+                model=self.model_name,
+                messages=messages,
+                temperature=self.temperature,
+                max_tokens=500
+            )
+            
+            return response.choices[0].message.content.strip()
             
         except Exception as e:
             logger.error(f"Error generating response: {str(e)}")
             raise Exception(f"Error generating response: {str(e)}")
 
-    def _initialize_model(self):
-        """Initialize the chosen model"""
-        if self.model_choice == "openai":
-            if not os.getenv('OPENAI_API_KEY'):
-                raise ValueError("OpenAI API key not found in environment variables")
-            self.openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-            self.llama_model = None
-            self.llama_tokenizer = None
-        else:
-            try:
-                from transformers import AutoTokenizer, AutoModelForCausalLM
-                import torch
-                
-                # Initialize Hugging Face's LLaMA
-                model_name = "meta-llama/Llama-2-7b-chat-hf"
-                auth_token = os.getenv('HUGGINGFACE_TOKEN')
-                
-                # Initialize tokenizer and model
-                self.llama_tokenizer = AutoTokenizer.from_pretrained(
-                    model_name,
-                    use_auth_token=auth_token
-                )
-                
-                self.llama_model = AutoModelForCausalLM.from_pretrained(
-                    model_name,
-                    use_auth_token=auth_token,
-                    torch_dtype=torch.float16,  # Use float16 for efficiency
-                    device_map="auto"  # Automatically handle device placement
-                )
-                
-                # Set model to evaluation mode
-                self.llama_model.eval()
-                logger.info("Successfully initialized LLaMA model")
-                
-            except Exception as e:
-                logger.error(f"Failed to initialize Llama model: {str(e)}")
-                logger.warning("Falling back to OpenAI")
-                self.model_choice = "openai"
-                self.openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-                self.llama_model = None
-                self.llama_tokenizer = None
-
-    def get_llama_response(self, prompt: str) -> str:
-        """Generate response using LLaMA model"""
-        try:
-            inputs = self.llama_tokenizer(prompt, return_tensors="pt").to(self.llama_model.device)
-            with torch.no_grad():
-                outputs = self.llama_model.generate(**inputs, max_length=500, temperature=0.7)
-            return self.llama_tokenizer.decode(outputs[0], skip_special_tokens=True)
-        except Exception as e:
-            logger.error(f"Error generating LLaMA response: {str(e)}")
-            raise Exception(f"LLaMA generation error: {str(e)}")
-
-    def _initialize_empty_collection(self, reset=False):
-        """Initialize ChromaDB collection"""
-        try:
-            try:
-                # Try to get existing collection
-                self.collection = self.chroma_client.get_or_create_collection(
-                    name="knowledge_base",
-                    metadata={"hnsw:space": "cosine"}
-                )
-                if reset:
-                    self.chroma_client.delete_collection("knowledge_base")
-                    self.collection = self.chroma_client.create_collection(
-                        name="knowledge_base",
-                        metadata={"hnsw:space": "cosine"}
-                    )
-            except Exception as e:
-                logger.error(f"Error in collection initialization: {str(e)}")
-                raise
-        except Exception as e:
-            logger.error(f"Error initializing collection: {str(e)}")
-            raise
-
     def is_enriched(self):
         """Check if knowledge base has content"""
         try:
-            # Check if collection has any documents
-            all_docs = self.collection.get()
-            
-            # Debug print to verify content
-            logger.info(f"Checking enrichment status:")
-            logger.info(f"Total documents: {len(all_docs.get('documents', []))}")
-            
-            # Consider enriched if there are any documents
-            return len(all_docs.get('documents', [])) > 0
+            count = Document.objects.count()
+            logger.info(f"Checking enrichment status: {count} documents")
+            return count > 0
         except Exception as e:
             logger.error(f"Error checking enrichment status: {str(e)}")
             return False
@@ -190,22 +83,20 @@ class HybridRAG:
                 model="text-embedding-ada-002"
             ).data[0].embedding
             
-            # Query ChromaDB
-            results = self.collection.query(
-                query_embeddings=[query_embedding],
-                n_results=k,
-                include=["documents", "metadatas", "distances"]
-            )
+            # Query pgvector
+            results = Document.objects.annotate(
+                distance=L2Distance('embedding', query_embedding)
+            ).order_by('distance')[:k]
             
             # Store metadata for later use
             self.last_query_metadata = {
-                "documents": results["documents"][0],
-                "metadata": results["metadatas"][0],
-                "distances": results["distances"][0]
+                "documents": [doc.content for doc in results],
+                "metadata": [doc.metadata for doc in results],
+                "distances": [float(doc.distance) for doc in results]
             }
             
             # Combine relevant documents into context
-            context = "\n\n".join(results["documents"][0])
+            context = "\n\n".join(doc.content for doc in results)
             
             return context
             
@@ -240,38 +131,34 @@ class HybridRAG:
                             ).data[0].embedding
                             
                             # Create unique ID for chunk
-                            chunk_id = hashlib.md5(chunk.encode()).hexdigest()
+                            chunk_id = str(uuid.uuid4())
                             
-                            # Store in ChromaDB with metadata
-                            self.collection.add(
-                                documents=[chunk],
-                                embeddings=[embedding],
-                                ids=[chunk_id],
-                                metadatas=[{
+                            # Store in pgvector
+                            Document.objects.create(
+                                content=chunk,
+                                embedding=embedding,
+                                metadata={
                                     'source': str(file_path),
                                     'timestamp': time.time(),
                                     'chunk_size': len(chunk)
-                                }]
+                                }
                             )
                         
                         processed_files += 1
                         print(f"Processed {file_path.name}")
                         
                 except Exception as e:
-                    print(f"Error processing {file_path}: {str(e)}")
+                    logger.error(f"Error processing file {file_path}: {str(e)}")
                     failed_files += 1
-                    
+            
             return {
-                'status': 'success',
                 'processed_files': processed_files,
                 'failed_files': failed_files
             }
-                
+            
         except Exception as e:
-            return {
-                'status': 'error',
-                'error': str(e)
-            }
+            logger.error(f"Error ingesting documents: {str(e)}")
+            return {'error': str(e)}
 
     def generate_insights(self, transcription: str) -> Dict[str, Any]:
         """Generate insights using RAG-enhanced prompting"""
@@ -373,7 +260,7 @@ class HybridRAG:
             """
             
             response = self.openai_client.chat.completions.create(
-                model=settings.GPT_MODEL_NAME,
+                model=self.model_name,
                 messages=[
                     {"role": "system", "content": """
                         You are an expert at synthesizing conversations and connecting them to organizational knowledge.
@@ -382,8 +269,8 @@ class HybridRAG:
                     """},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=settings.DEFAULT_TEMPERATURE,
-                max_tokens=settings.DEFAULT_MAX_TOKENS
+                temperature=self.temperature,
+                max_tokens=500
             )
             
             # Enhanced metadata handling
@@ -428,12 +315,12 @@ class HybridRAG:
             """
             
             response = self.openai_client.chat.completions.create(
-                model=settings.GPT_MODEL_NAME,
+                model=self.model_name,
                 messages=[
                     {"role": "system", "content": "Identify knowledge base gaps and needed updates."},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=settings.DEFAULT_TEMPERATURE
+                temperature=self.temperature
             )
             
             return json.loads(response.choices[0].message.content)
@@ -441,45 +328,6 @@ class HybridRAG:
         except Exception as e:
             print(f"Error identifying knowledge gaps: {str(e)}")
             return []
-
-    def generate_email(self, transcription: str) -> Dict[str, Any]:
-        """Generate email using RAG-enhanced prompting"""
-        try:
-            context = self.get_factual_context(transcription)
-            
-            prompt = f"""
-            Using relevant context from our knowledge base:
-            {context}
-            
-            And based on this conversation:
-            {transcription}
-            
-            Generate a professional email that:
-            1. Summarizes key points
-            2. Includes relevant background information
-            3. Outlines next steps
-            4. Maintains appropriate tone and context
-            
-            Format as JSON with "to", "subject", and "body" fields.
-            """
-            
-            response = self.openai_client.chat.completions.create(
-                model=settings.GPT_MODEL_NAME,
-                messages=[
-                    {"role": "system", "content": "You are an expert at writing professional emails based on conversations."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=settings.DEFAULT_TEMPERATURE
-            )
-            
-            return {
-                'email_data': json.loads(response.choices[0].message.content),
-                'confidence': 1 - min(self.last_query_metadata.get("distances", [0])),
-                'sources': self.last_query_metadata.get("metadata", [])
-            }
-            
-        except Exception as e:
-            return {'error': str(e)}
 
     def query(self, question: str, style: str = "conversation", user_context: Dict = None) -> Dict[str, Any]:
         """Query method for real-time conversation"""
@@ -514,7 +362,7 @@ class HybridRAG:
             """
             
             response = self.openai_client.chat.completions.create(
-                model=settings.GPT_MODEL_NAME,
+                model=self.model_name,
                 messages=[
                     {"role": "system", "content": """
                         You are an expert at providing information from our knowledge base.
@@ -522,8 +370,8 @@ class HybridRAG:
                     """},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=settings.DEFAULT_TEMPERATURE,
-                max_tokens=settings.DEFAULT_MAX_TOKENS
+                temperature=self.temperature,
+                max_tokens=500
             )
             
             return {
@@ -544,10 +392,10 @@ class HybridRAG:
     def inspect_collection(self) -> Dict[str, Any]:
         """Inspect the current state of the knowledge base"""
         try:
-            all_docs = self.collection.get()
+            all_docs = Document.objects.all()
             return {
-                'documents': all_docs['documents'],
-                'count': len(all_docs['documents'])
+                'documents': [doc.content for doc in all_docs],
+                'count': all_docs.count()
             }
         except Exception as e:
             logger.error(f"Error inspecting collection: {str(e)}")
@@ -556,12 +404,14 @@ class HybridRAG:
     def _is_duplicate(self, content: str) -> bool:
         """Check if content is already in knowledge base"""
         try:
-            results = self.collection.query(
-                query_texts=[content],
-                n_results=1
-            )
-            if results and results['distances'][0]:
-                return results['distances'][0][0] < 0.1  # Similarity threshold
+            results = Document.objects.annotate(
+                distance=L2Distance('embedding', self.openai_client.embeddings.create(
+                    input=content,
+                    model="text-embedding-ada-002"
+                ).data[0].embedding)
+            ).order_by('distance')[:1]
+            if results and results[0].distance:
+                return results[0].distance < 0.1  # Similarity threshold
             return False
         except:
             return False
@@ -585,16 +435,14 @@ class HybridRAG:
                 model="text-embedding-ada-002"
             ).data[0].embedding
             
-            # Add to ChromaDB
-            doc_id = str(uuid.uuid4())
-            self.collection.add(
-                documents=[document['content']],
-                embeddings=[embedding],
-                metadatas=[{
+            # Add to pgvector
+            Document.objects.create(
+                content=document['content'],
+                embedding=embedding,
+                metadata={
                     **document['metadata'],
                     'file_path': str(file_path) if save_to_file else None
-                }],
-                ids=[doc_id]
+                }
             )
             
             return True
@@ -602,33 +450,11 @@ class HybridRAG:
         except Exception as e:
             logger.error(f"Error adding to knowledge base: {str(e)}")
             return False
-        
-    def generate_summary_with_llama(self, content: str) -> str:
-        """Generate summary using Llama model"""
-        try:
-            prompt = f"Generate a brief, informative summary in 2-3 sentences of the following content:\n\n{content}"
-            inputs = self.llama_tokenizer(prompt, return_tensors="pt").to(self.llama_model.device)
-            
-            with torch.no_grad():
-                outputs = self.llama_model.generate(
-                    inputs.input_ids,
-                    max_length=200,
-                    temperature=0.7,
-                    num_return_sequences=1,
-                    pad_token_id=self.llama_tokenizer.eos_token_id
-                )
-            
-            summary = self.llama_tokenizer.decode(outputs[0], skip_special_tokens=True)
-            return summary.strip()
-            
-        except Exception as e:
-            logger.error(f"Error generating summary with Llama: {str(e)}")
-            return "Summary generation failed"
 
     def clear_knowledge_base(self) -> bool:
         """Clear all content from knowledge base"""
         try:
-            self._initialize_empty_collection(reset=True)
+            Document.objects.all().delete()
             return True
         except Exception as e:
             logger.error(f"Error clearing knowledge base: {str(e)}")
@@ -652,17 +478,15 @@ class HybridRAG:
                                 model="text-embedding-ada-002"
                             ).data[0].embedding
 
-                            # Add to ChromaDB with metadata
-                            doc_id = str(uuid.uuid4())
-                            self.collection.add(
-                                documents=[content],
-                                embeddings=[embedding],
-                                metadatas=[{
+                            # Add to pgvector with metadata
+                            Document.objects.create(
+                                content=content,
+                                embedding=embedding,
+                                metadata={
                                     'source': str(file_path),
                                     'timestamp': time.time(),
                                     'type': 'knowledge_base'
-                                }],
-                                ids=[doc_id]
+                                }
                             )
                             logger.info(f"Loaded knowledge base file: {file_path}")
                 except Exception as e:
@@ -670,4 +494,25 @@ class HybridRAG:
 
         except Exception as e:
             logger.error(f"Error loading knowledge base: {str(e)}")
+
+    def _chunk_text(self, text: str, chunk_size: int = 500) -> List[str]:
+        """Split text into chunks of approximately equal size"""
+        words = text.split()
+        chunks = []
+        current_chunk = []
+        current_size = 0
+        
+        for word in words:
+            current_chunk.append(word)
+            current_size += len(word) + 1  # +1 for space
+            
+            if current_size >= chunk_size:
+                chunks.append(' '.join(current_chunk))
+                current_chunk = []
+                current_size = 0
+        
+        if current_chunk:
+            chunks.append(' '.join(current_chunk))
+        
+        return chunks
     

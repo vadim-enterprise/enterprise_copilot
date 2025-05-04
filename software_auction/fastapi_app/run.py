@@ -3,10 +3,18 @@ import sys
 from pathlib import Path
 import socket
 import logging
-from dotenv import load_dotenv
+import uvicorn
+
+# Load environment variables
+from software_auction.fastapi_app.utils.env_loader import load_env_variables
+load_env_variables()
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    stream=sys.stdout
+)
 logger = logging.getLogger(__name__)
 
 def check_port(port):
@@ -39,12 +47,11 @@ if __name__ == "__main__":
     logger.info(f"Project root: {project_root}")
     
     try:
-        import uvicorn
         uvicorn.run(
             "software_auction.fastapi_app.main:app",
             host="127.0.0.1",
             port=PORT,
-            reload=True,
+            reload=False,
             reload_dirs=[str(project_root)],
             log_level="info",
             workers=1

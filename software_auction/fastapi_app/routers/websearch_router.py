@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Request
-from ..services.websearch_service import WebSearchService, ModelChoice
+from ..services.websearch_service import WebSearchService
 from ..services import settings
 import logging
 

@@ -9,7 +9,6 @@ import json
 from django.conf import settings
 from pathlib import Path
 from typing import Dict, Any, List
-from ..services.knowledge_service import KnowledgeService
 from openai import OpenAI
 
 logger = logging.getLogger(__name__)

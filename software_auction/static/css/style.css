@@ -179,14 +179,17 @@ body {
 
 /* Search Container */
 .search-container {
-    width: 100%;
-    max-width: 600px;
-    margin: 0 auto;
+    position: fixed;
+    bottom: 80px;
+    left: 70%;
+    transform: translateX(-50%);
+    width: 600px;
+    margin: 0;
     padding: 5px;
-    position: relative;
     background: white;
     border-radius: 12px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    z-index: 1000;
 }
 
 .search-box {
@@ -244,29 +247,23 @@ body {
 
 /* Search Results Container */
 .search-results {
-    position: relative;
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    width: 100%;
     background-color: white;
     border-radius: 12px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     overflow-y: auto;
-    z-index: 998;
+    z-index: 999;
     padding: 10px;
-    width: 100%;
-    max-width: 800px;
-    margin: 0 auto;
-    min-height: 800px;
-    margin-top: 10px;
-    position: absolute;
-    top: 100%;
+    margin-bottom: 10px;
+    max-height: 400px;
+    display: none;
 }
 
 .search-results.active {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 15px;
-    height: calc(100vh - 150px);
-    max-height: none;
+    display: block;
 }
 
 .search-icon {
@@ -751,10 +748,10 @@ body {
     100% { transform: rotate(360deg); }
 }
 
-/* Chatbot Styles */
+/* Chatbot Widget Styles */
 .chatbot-widget {
     position: fixed;
-    right: 20px;
+    left: 20px;
     bottom: 20px;
     width: 350px;
     background: white;
@@ -1279,7 +1276,7 @@ body {
 /* Chatbot Widget Styles (Updated) */
 .chatbot-widget {
     position: fixed;
-    right: 20px;
+    left: 20px;
     bottom: 20px;
     width: 350px;
     background: white;
@@ -1384,7 +1381,7 @@ body {
 }
 
 /* Chart Widget Styles */
-.chart-widget {
+/* .chart-widget {
     position: fixed;
     right: 20px;
     top: 20px;
@@ -1438,12 +1435,11 @@ body {
     height: calc(100% - 40px); 
 }
 
-/* Make chart canvas responsive */
 #myChart {
     width: 100% !important;
     height: 100% !important;
     min-height: 200px;
-}
+} */
 
 /* Resize handle styles */
 .resize-handle {
@@ -1526,4 +1522,69 @@ body {
 @keyframes bounce {
     0%, 80%, 100% { transform: scale(0); }
     40% { transform: scale(1); }
+}
+
+/* Search Results Window */
+.search-results-window {
+    position: fixed;
+    bottom: 160px;  /* Position above the search bar */
+    left: 70%;
+    transform: translateX(-50%);
+    width: 600px;
+    max-height: 400px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    overflow-y: auto;
+    opacity: 1;  /* Changed from 0 to 1 */
+    visibility: visible;  /* Changed from hidden to visible */
+    transition: all 0.3s ease;
+    z-index: 999;
+    padding: 15px;
+    display: block;  /* Added to ensure visibility */
+}
+
+/* Remove the active class since we want it always visible */
+.search-results-window.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.search-results-window .result-item {
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+    transition: background-color 0.2s ease;
+}
+
+.search-results-window .result-item:hover {
+    background-color: #f8f9fa;
+}
+
+.search-results-window .result-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 5px;
+}
+
+.search-results-window .result-description {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 8px;
+}
+
+.search-results-window .result-link {
+    color: #00b894;
+    text-decoration: none;
+    font-size: 14px;
+    display: inline-block;
+}
+
+.search-results-window .result-link:hover {
+    text-decoration: underline;
+}
+
+/* Update existing search results container */
+.search-results {
+    display: none;
 } 

@@ -1,12 +1,16 @@
 from fastapi import APIRouter, Request, HTTPException
-from ..rag.rag_service import RAGService
 import logging
 from pydantic import BaseModel
 from typing import Optional, List
 import re
+from openai import OpenAI
+import os
 
 rag_router = APIRouter()
 logger = logging.getLogger(__name__)
+
+# Initialize OpenAI client
+openai_client = OpenAI()
 
 class QueryRequest(BaseModel):
     query: str
@@ -27,16 +31,23 @@ async def text_query(request: Request):
             }
 
         try:
-            response = RAGService.handle_text_query(data['query'])
-            if not response:
-                raise ValueError("Empty response from RAG service")
+            # Use OpenAI directly for text queries
+            response = openai_client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[{"role": "user", "content": data['query']}],
+                temperature=0.7,
+                max_tokens=500
+            )
+            
+            if not response or not response.choices:
+                raise ValueError("Empty response from OpenAI")
             
             return {
                 "status": "success",
-                "response": response
+                "response": response.choices[0].message.content
             }
         except Exception as e:
-            logger.error(f"RAG service error: {str(e)}")
+            logger.error(f"OpenAI service error: {str(e)}")
             return {
                 "status": "error",
                 "message": f"Error processing query: {str(e)}"
@@ -61,12 +72,12 @@ async def add_to_kb(request: Request):
                 "message": "Missing required fields"
             }
         
-        # Add to knowledge base using RAG service
-        RAGService.add_to_knowledge_base(data)
+        # Just log the data for now since we removed the knowledge base
+        logger.info(f"Would have added to knowledge base: {data}")
         
         return {
             "status": "success",
-            "message": "Successfully added to knowledge base"
+            "message": "Successfully logged content (knowledge base functionality removed)"
         }
     except Exception as e:
         logger.error(f"Error adding to knowledge base: {str(e)}")

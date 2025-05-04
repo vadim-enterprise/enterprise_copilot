@@ -1,5 +1,5 @@
 # OpenAI Model Settings
-GPT_MODEL_NAME = "gpt-4-turbo-preview"  # or "gpt-3.5-turbo" for a cheaper option
+GPT_MODEL_NAME = "gpt-4-o"  # or "gpt-3.5-turbo" for a cheaper option
 EMBEDDING_MODEL_NAME = "text-embedding-ada-002"
 DEFAULT_TEMPERATURE = 0.7
 

@@ -11,44 +11,21 @@
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     
     <!-- JavaScript Dependencies -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <!-- <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script> -->
     <script src="{% static 'js/speech_manager.js' %}"></script>
     <script src="{% static 'js/chatbot.js' %}"></script>
-    <script src="{% static 'js/search.js' %}"></script>    
+    <script src="{% static 'js/search.js' %}"></script>
+    <script src="{% static 'js/file_upload.js' %}"></script>    
 </head>
 <body>
     <div id="notification-container" class="notification-container"></div>
     
-    <!-- Simple Top Bar with Company DNA Button -->
-    <nav class="top-bar">
-        <button class="company-dna-btn">
-            <svg class="dna-icon" viewBox="0 0 24 24" width="24" height="24">
-                <!-- Double Helix DNA Structure -->
-                <path class="dna-strand-1" d="M7 2c0 0 10 4 10 10s-10 10-10 10" 
-                      fill="none" 
-                      stroke="currentColor" 
-                      stroke-width="2"
-                      stroke-linecap="round"/>
-                <path class="dna-strand-2" d="M17 2c0 0 -10 4 -10 10s10 10 10 10" 
-                      fill="none" 
-                      stroke="currentColor" 
-                      stroke-width="2"
-                      stroke-linecap="round"/>
-                <!-- Base Pairs -->
-                <path class="dna-pairs" d="M7 4h10 M7 8h10 M7 12h10 M7 16h10 M7 20h10" 
-                      stroke="currentColor" 
-                      stroke-width="1.5"
-                      stroke-linecap="round"/>
-            </svg>
-            <span>Company DNA</span>
-        </button>
-    </nav>
-
     <!-- Main Content Area -->
     <main class="main-content">
-        <!-- Logo -->
-        <div class="logo">
-            <h1>ToolsHub</h1>
+
+        <!-- Search Results Window -->
+        <div class="search-results-window" id="searchResultsWindow">
+            <!-- Results will be dynamically inserted here -->
         </div>
 
         <!-- Centered Search -->
@@ -58,8 +35,11 @@
                 <button id="webSearchButton" type="button">
                     <span class="search-icon">🔍</span>
                 </button>
+                <button id="uploadCsvButton" type="button" title="Upload CSV">
+                    <span class="upload-icon">📁</span>
+                </button>
+                <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
             </div>
-            <div id="searchResults" class="search-results"></div>
         </div>
     </main>
 

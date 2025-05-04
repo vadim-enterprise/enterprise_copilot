@@ -59,9 +59,6 @@ class Chatbot {
         this.initializeServices();
         
         this.setupEventListeners();
-
-        // Create chart container
-        this.createChartContainer();
     }
 
     setupEventListeners() {
@@ -819,145 +816,8 @@ class Chatbot {
             }
         }
     }
-
-    createChartContainer() {
-        // Create chart widget container
-        this.chartWidget = document.createElement('div');
-        this.chartWidget.id = 'chartWidget';
-        this.chartWidget.className = 'chart-widget';
-        
-        // Create header with title and minimize button
-        const header = document.createElement('div');
-        header.className = 'chart-header';
-        
-        const title = document.createElement('span');
-        title.textContent = 'Chart Display';
-        
-        const minimizeBtn = document.createElement('button');
-        minimizeBtn.innerHTML = '−';
-        minimizeBtn.className = 'minimize-chart';
-        minimizeBtn.onclick = () => this.toggleChartWidget();
-        
-        header.appendChild(title);
-        header.appendChild(minimizeBtn);
-        
-        // Create canvas for chart
-        const chartContainer = document.createElement('div');
-        chartContainer.className = 'chart-container';
-        
-        const canvas = document.createElement('canvas');
-        canvas.id = 'myChart';
-        
-        chartContainer.appendChild(canvas);
-        
-        // Add resize handle
-        const resizeHandle = document.createElement('div');
-        resizeHandle.className = 'resize-handle';
-        chartContainer.appendChild(resizeHandle);
-        
-        // Assemble widget
-        this.chartWidget.appendChild(header);
-        this.chartWidget.appendChild(chartContainer);
-        
-        // Add to document
-        document.body.appendChild(this.chartWidget);
-        
-        // Make widget draggable
-        this.makeChartWidgetDraggable();
-        // Make widget resizable
-        this.makeChartWidgetResizable();
-    }
-
-    toggleChartWidget() {
-        const container = this.chartWidget.querySelector('.chart-container');
-        const button = this.chartWidget.querySelector('.minimize-chart');
-        
-        if (container.style.display === 'none') {
-            container.style.display = 'block';
-            button.innerHTML = '−';
-        } else {
-            container.style.display = 'none';
-            button.innerHTML = '+';
-        }
-    }
-
-    makeChartWidgetDraggable() {
-        const header = this.chartWidget.querySelector('.chart-header');
-        let isDragging = false;
-        let currentX;
-        let currentY;
-        let initialX;
-        let initialY;
-        let xOffset = 0;
-        let yOffset = 0;
-        
-        header.addEventListener('mousedown', (e) => {
-            initialX = e.clientX - xOffset;
-            initialY = e.clientY - yOffset;
-            
-            if (e.target === header) {
-                isDragging = true;
-            }
-        });
-        
-        document.addEventListener('mousemove', (e) => {
-            if (isDragging) {
-                e.preventDefault();
-                
-                currentX = e.clientX - initialX;
-                currentY = e.clientY - initialY;
-                
-                xOffset = currentX;
-                yOffset = currentY;
-                
-                this.chartWidget.style.transform = 
-                    `translate(${currentX}px, ${currentY}px)`;
-            }
-        });
-        
-        document.addEventListener('mouseup', () => {
-            isDragging = false;
-        });
-    }
-
-    makeChartWidgetResizable() {
-        const resizeHandle = this.chartWidget.querySelector('.resize-handle');
-        let isResizing = false;
-        let startWidth, startHeight, startX, startY;
-
-        resizeHandle.addEventListener('mousedown', (e) => {
-            isResizing = true;
-            startX = e.clientX;
-            startY = e.clientY;
-            startWidth = this.chartWidget.offsetWidth;
-            startHeight = this.chartWidget.offsetHeight;
-
-            // Add event listeners
-            document.addEventListener('mousemove', handleMouseMove);
-            document.addEventListener('mouseup', () => {
-                isResizing = false;
-                document.removeEventListener('mousemove', handleMouseMove);
-            });
-        });
-
-        const handleMouseMove = (e) => {
-            if (!isResizing) return;
-
-            // Calculate new size
-            const newWidth = startWidth + (e.clientX - startX);
-            const newHeight = startHeight + (e.clientY - startY);
-
-            // Apply minimum dimensions
-            this.chartWidget.style.width = `${Math.max(300, newWidth)}px`;
-            this.chartWidget.style.height = `${Math.max(200, newHeight)}px`;
-
-            // If there's an active chart, update its size
-            if (window.currentChart) {
-                window.currentChart.resize();
-            }
-        };
-    }
 }
+
 // Initialize chatbot when document loads
 document.addEventListener('DOMContentLoaded', () => {
     new Chatbot();

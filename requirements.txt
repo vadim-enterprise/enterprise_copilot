@@ -13,6 +13,7 @@ autobahn==24.4.2
 Automat==24.8.1
 azure-core==1.32.0
 azure-identity==1.19.0
+av==14.3.0
 backoff==2.2.1
 bcrypt==4.2.1
 beautifulsoup4==4.8.2
@@ -24,7 +25,7 @@ channels==4.0.0
 chardet==3.0.4
 charset-normalizer==3.4.0
 chroma-hnswlib==0.7.3
-chromadb==0.4.18
+chromadb==1.0.7
 click==8.1.7
 cobble==0.1.4
 coloredlogs==15.0.1
@@ -217,3 +218,15 @@ zipp==3.21.0
 zope.interface==7.1.0
 llama-cpp-python==0.2.11
 PyPDF2==3.0.1
+aiortc==1.11.0
+pyee==13.0.0
+pylibsrtp==0.12.0
+aioice==0.10.1
+ifaddr==0.2.0
+google_crc32c==1.7.1
+aiofiles==24.1.0
+jsonschema==4.23.0
+referencing==0.36.2
+rpds==5.1.0
+jsonschema_specifications==2025.4.1
+ffmpeg==1.4

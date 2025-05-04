@@ -5,25 +5,14 @@ import os
 import logging
 from django.views.decorators.csrf import ensure_csrf_cookie
 import json
-from django.template.loader import get_template
 from django.views.decorators.cache import never_cache
-from django.http import JsonResponse
-from django.views.decorators.csrf import ensure_csrf_cookie
-from django.views.decorators.http import require_http_methods
 from .fastapi_app.rag.hybrid_rag import HybridRAG
 from .fastapi_app.services.websearch_service import WebSearchService
-from .services.email_service import EmailService
 from .fastapi_app.rag.rag_service import RAGService
 from django.views.decorators.csrf import csrf_protect
-from software_auction.fastapi_app.services.knowledge_service import KnowledgeService
-from openai import OpenAI
-import tempfile
 from django.middleware.csrf import get_token
-import io
-import ffmpeg
-from .services.analysis_service import AnalysisService
+from .fastapi_app.services.analysis_service import AnalysisService
 from software_auction.fastapi_app.services.transcription_service import TranscriptionService
-import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -40,50 +29,6 @@ transcription_service = TranscriptionService()
 @never_cache  # Add this decorator
 def index(request):
     return render(request, 'index.html')
-
-@csrf_protect
-@require_http_methods(["POST"])
-def generate_and_send_email(request):
-    try:
-        # Parse JSON data with error handling
-        try:
-            data = json.loads(request.body)
-            transcript = data.get('transcript', '').strip()
-        except json.JSONDecodeError as e:
-            logger.error(f"Invalid JSON received: {request.body}")
-            return JsonResponse({
-                'status': 'error',
-                'message': 'Invalid JSON data'
-            }, status=400)
-
-        if not transcript:
-            return JsonResponse({
-                'status': 'error',
-                'message': 'No transcript provided'
-            }, status=400)
-
-        # Generate email content
-        try:
-            email_service = EmailService()
-            email_content = email_service.generate_email(transcript)
-            
-            return JsonResponse({
-                'status': 'success',
-                'email': email_content
-            })
-        except Exception as e:
-            logger.error(f"Error generating email: {str(e)}")
-            return JsonResponse({
-                'status': 'error',
-                'message': f'Error generating email: {str(e)}'
-            }, status=500)
-
-    except Exception as e:
-        logger.error(f"Server error in generate_and_send_email: {str(e)}")
-        return JsonResponse({
-            'status': 'error',
-            'message': f'Server error: {str(e)}'
-        }, status=500)
 
 @require_http_methods(["GET"])
 def health_check(request):

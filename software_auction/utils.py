@@ -93,15 +93,3 @@ def truncate_at_sentence(self, text: str, max_words: int = 150) -> str:
     
     # If no sentence boundary found, return at word boundary
     return truncated + '...'
-
-def _chunk_text(self, text: str, chunk_size: int = 500) -> List[str]:
-    """Split text into chunks with overlap"""
-    chunks = []
-    overlap = 50  # Number of words to overlap
-    words = text.split()
-    
-    for i in range(0, len(words), chunk_size - overlap):
-        chunk = ' '.join(words[i:i + chunk_size])
-        chunks.append(chunk)
-        
-    return chunks

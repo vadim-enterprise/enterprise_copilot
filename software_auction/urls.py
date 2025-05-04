@@ -10,7 +10,6 @@ urlpatterns = [
     path('', views.index, name='index'),
     path('transcribe-whisper/', views.transcribe_whisper, name='transcribe_whisper'),
     path('generate-insights/', views.generate_insights, name='generate_insights'),
-    path('generate-email/', views.generate_and_send_email, name='generate_email'),
     path('enrich-knowledge-base/', views.enrich_knowledge_base, name='enrich_knowledge_base'),
     path('inspect-knowledge-base/', views.inspect_knowledge_base, name='inspect_knowledge_base'),
     path('clear-knowledge-base/', views.clear_knowledge_base, name='clear_knowledge_base'),
@@ -22,18 +21,3 @@ urlpatterns = [
     path('transcribe-speech/', views.handle_transcription_request, name='transcribe_speech'),
 ]
 
-def handle_tts_request(request):
-    # Logic to handle TTS request
-    text = request.POST.get('text')
-    voice = request.POST.get('voice', 'alloy')
-
-    if not text:
-        return JsonResponse({'status': 'error', 'message': 'Text is required.'}, status=422)
-
-    result = tts_service.generate_speech(text, voice)
-    return JsonResponse(result)
-
-def call_model(self, summarized_data):
-    prompt = f"Based on the following information, provide a concise answer: {summarized_data}"
-    # Call your model with the prompt
-    return model_response

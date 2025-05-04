@@ -4,8 +4,6 @@ import sys
 import os
 from pathlib import Path
 import logging
-import chromadb
-from chromadb.config import Settings
 from openai import OpenAI
 from dotenv import load_dotenv
 import signal
@@ -22,6 +20,7 @@ import django
 django.setup()
 
 from django.conf import settings as django_settings
+from django.db import connection
 
 # Load environment variables
 load_dotenv()
@@ -80,40 +79,15 @@ def collect_static():
         logger.error(f"Error collecting static files: {e}")
         return False
 
-def initialize_chroma():
-    """Initialize or migrate ChromaDB"""
+def setup_pgvector():
+    """Setup pgvector extension in PostgreSQL"""
     try:
-        chroma_dir = os.path.join(django_settings.BASE_DIR, 'chroma_data')
-        os.makedirs(chroma_dir, exist_ok=True)
-        
-        # Initialize ChromaDB client with new architecture
-        client = chromadb.PersistentClient(
-            path=str(chroma_dir)
-        )
-
-        # Try to get or create knowledge base collection
-        try:
-            collection = client.get_collection("knowledge_base")
-            logger.info("Existing knowledge base collection found")
-        except:
-            collection = client.create_collection(
-                name="knowledge_base",
-                metadata={"hnsw:space": "cosine"}
-            )
-            logger.info("Created new knowledge base collection")
-
-        # Verify collection
-        try:
-            count = len(collection.get()['documents'])
-            logger.info(f"Knowledge base contains {count} documents")
-        except Exception as e:
-            logger.error(f"Error verifying collection: {e}")
-            return False
-
+        with connection.cursor() as cursor:
+            cursor.execute("CREATE EXTENSION IF NOT EXISTS vector;")
+            logger.info("pgvector extension created or already exists")
         return True
-
     except Exception as e:
-        logger.error(f"Error initializing ChromaDB: {e}")
+        logger.error(f"Error setting up pgvector: {e}")
         return False
 
 def verify_openai_key():
@@ -203,8 +177,8 @@ def main():
             logger.error("OpenAI API key verification failed")
             sys.exit(1)
 
-        if not initialize_chroma():
-            logger.error("ChromaDB initialization failed")
+        if not setup_pgvector():
+            logger.error("pgvector setup failed")
             sys.exit(1)
             
         if not collect_static():
