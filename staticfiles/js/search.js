@@ -135,30 +135,151 @@ async function addToKnowledgeBase(result) {
 
 class WebSearch {
     constructor() {
-        this.baseUrl = 'http://127.0.0.1:8001/api';
-        this.chatEndpoint = '/chat/query';
-        this.websearchEndpoint = '/websearch/search';
-        this.logger = new Logger('WebSearch');
+        // Define API endpoints
+        this.chatEndpoint = 'http://127.0.0.1:8001/api/chat/query';
+        this.webSearchEndpoint = 'http://127.0.0.1:8001/api/websearch/search';
+        
+        // Get DOM elements
         this.searchInput = document.getElementById('webSearchInput');
         this.searchButton = document.getElementById('webSearchButton');
         this.resultsWindow = document.getElementById('searchResultsWindow');
-        this.setupEventListeners();
+        this.resultsContent = this.resultsWindow?.querySelector('.search-results-content');
+        this.closeButton = this.resultsWindow?.querySelector('.search-results-close');
+        this.mapContainer = document.getElementById('mapContainer');
+        
+        // Initialize if elements exist
+        if (this.searchInput && this.searchButton && this.resultsWindow && this.resultsContent) {
+            this.initialize();
+            this.initializeMap();
+        } else {
+            console.error('[WebSearch] Required elements not found:', {
+                searchInput: !!this.searchInput,
+                searchButton: !!this.searchButton,
+                resultsWindow: !!this.resultsWindow,
+                resultsContent: !!this.resultsContent
+            });
+        }
     }
 
-    setupEventListeners() {
-        // Handle search button click
-        this.searchButton.addEventListener('click', (e) => {
-            e.preventDefault();
-            this.performSearch();
-        });
-        
-        // Handle Enter key press in search input
+    initialize() {
+        // Add event listeners
+        this.searchButton.addEventListener('click', () => this.performSearch());
         this.searchInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
-                e.preventDefault();
                 this.performSearch();
             }
         });
+        
+        // Add close button handler
+        if (this.closeButton) {
+            this.closeButton.addEventListener('click', () => {
+                this.resultsWindow.classList.remove('active');
+            });
+        }
+    }
+
+    initializeMap() {
+        if (!this.mapContainer) {
+            console.error('[WebSearch] Map container not found');
+            return;
+        }
+
+        // Set up the map dimensions
+        const width = 800;
+        const height = 400;
+
+        // Create SVG container
+        const svg = d3.select('#map')
+            .append('svg')
+            .attr('width', width)
+            .attr('height', height);
+
+        // Create a projection
+        const projection = d3.geoAlbersUsa()
+            .fitSize([width, height], { type: 'Sphere' });
+
+        // Create a path generator
+        const path = d3.geoPath().projection(projection);
+
+        // Load the US map data
+        d3.json('https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json')
+            .then(us => {
+                // Convert TopoJSON to GeoJSON
+                const states = topojson.feature(us, us.objects.states);
+
+                // Draw the states
+                svg.append('g')
+                    .selectAll('path')
+                    .data(states.features)
+                    .enter()
+                    .append('path')
+                    .attr('d', path)
+                    .attr('class', 'state')
+                    .attr('fill', '#e0e0e0')
+                    .attr('stroke', '#fff')
+                    .attr('stroke-width', 1)
+                    .on('mouseover', function(event, d) {
+                        d3.select(this)
+                            .attr('fill', '#bdbdbd');
+                    })
+                    .on('mouseout', function(event, d) {
+                        d3.select(this)
+                            .attr('fill', '#e0e0e0');
+                    });
+
+                // Add state names
+                svg.append('g')
+                    .selectAll('text')
+                    .data(states.features)
+                    .enter()
+                    .append('text')
+                    .attr('x', d => path.centroid(d)[0])
+                    .attr('y', d => path.centroid(d)[1])
+                    .attr('text-anchor', 'middle')
+                    .attr('font-size', '8px')
+                    .text(d => d.properties.name);
+
+                // Add tooltip
+                const tooltip = d3.select('#map')
+                    .append('div')
+                    .attr('class', 'state-tooltip')
+                    .style('opacity', 0);
+
+                // Add tooltip events
+                svg.selectAll('.state')
+                    .on('mouseover', function(event, d) {
+                        tooltip.transition()
+                            .duration(200)
+                            .style('opacity', .9);
+                        tooltip.html(d.properties.name)
+                            .style('left', (event.pageX + 10) + 'px')
+                            .style('top', (event.pageY - 28) + 'px');
+                    })
+                    .on('mouseout', function(d) {
+                        tooltip.transition()
+                            .duration(500)
+                            .style('opacity', 0);
+                    });
+            })
+            .catch(error => {
+                console.error('[WebSearch] Error loading map data:', error);
+            });
+    }
+
+    updateMapColors(stateData) {
+        if (!this.mapContainer) return;
+
+        // Update state colors based on data
+        d3.selectAll('.state')
+            .attr('fill', d => {
+                const stateName = d.properties.name;
+                const data = stateData[stateName];
+                if (data) {
+                    // Color scale based on data value
+                    return d3.scaleSequential(d3.interpolateBlues)(data.value);
+                }
+                return '#e0e0e0';
+            });
     }
 
     async performSearch() {
@@ -166,141 +287,156 @@ class WebSearch {
         if (!query) return;
 
         try {
-            this.showLoadingState();
+            // Show loading state
+            this.resultsContent.innerHTML = '<div class="result-item"><div class="loading-spinner"></div></div>';
+            this.resultsWindow.classList.add('active');
+
+            // Call chat API
+            const response = await this._callChatAPI(query);
+            console.log('[WebSearch] Raw API response:', response);
             
-            // First try to get response from ChatGPT
-            const chatResponse = await this._callChatAPI(query);
-            this.logger.info(`ChatGPT response received: ${chatResponse.response.substring(0, 100)}...`);
-            
-            // Display the chat response
-            this.displayResults({
-                chat_response: chatResponse.response,
-                web_results: []
-            });
-            
-            // If web search was used or needed, perform web search
-            if (chatResponse.used_web_search) {
-                this.logger.info('Performing web search...');
-                const webSearchResults = await this._callWebSearchAPI(query);
-                this.logger.info(`Web search results received: ${webSearchResults.results.length} results`);
-                
-                // Update the display with web search results
-                this.displayResults({
-                    chat_response: chatResponse.response,
-                    web_results: webSearchResults.results
-                });
-            }
-            
+            // Display results
+            this.displayResults(response);
         } catch (error) {
-            this.logger.error(`Search error: ${error}`);
-            this.showError('Failed to perform search. Please try again.');
-        } finally {
-            this.hideLoadingState();
+            console.error('[WebSearch] Search error:', error);
+            this.displayError(error.message || 'An error occurred during the search');
+        }
+    }
+
+    async _callChatAPI(query) {
+        try {
+            console.log('[WebSearch] Calling chat API with query:', query);
+            
+            const response = await fetch(this.chatEndpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    query,
+                    use_web_search: true
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`API request failed with status ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log('[WebSearch] Raw API response data:', data);
+
+            // Check if we have a valid response
+            if (!data || typeof data !== 'object') {
+                throw new Error('Invalid response format from API');
+            }
+
+            // Check the structure of the response
+            if (data.response) {
+                // If the response is nested under a 'response' key
+                return {
+                    chat_response: data.response,
+                    web_results: data.web_results || []
+                };
+            } else if (data.chat_response) {
+                // If the response is already in the expected format
+                return data;
+            } else {
+                // If we have a different response structure
+                console.warn('[WebSearch] Unexpected response structure:', data);
+                return {
+                    chat_response: JSON.stringify(data),
+                    web_results: []
+                };
+            }
+        } catch (error) {
+            console.error('[WebSearch] Error calling chat API:', error);
+            throw error;
         }
     }
 
     displayResults(data) {
-        this.resultsWindow.innerHTML = '';
+        if (!this.resultsContent) {
+            console.error('[WebSearch] Results content element not found');
+            return;
+        }
+
+        console.log('[WebSearch] Processing data for display:', data);
+
+        // Clear previous results
+        this.resultsContent.innerHTML = '';
         
-        // Display ChatGPT response
-        const chatResponseElement = document.createElement('div');
-        chatResponseElement.className = 'result-item chat-response';
-        chatResponseElement.innerHTML = `
-            <div class="result-title">AI Response</div>
-            <div class="result-description">${data.chat_response}</div>
-        `;
-        this.resultsWindow.appendChild(chatResponseElement);
+        // Display chat response if available
+        if (data.chat_response) {
+            console.log('[WebSearch] Displaying chat response:', data.chat_response);
+            const chatResponseElement = document.createElement('div');
+            chatResponseElement.className = 'result-item chat-response';
+            chatResponseElement.innerHTML = `
+                <div class="result-title">AI Analysis</div>
+                <div class="result-description">${data.chat_response}</div>
+            `;
+            this.resultsContent.appendChild(chatResponseElement);
+        }
         
-        // If there are web search results, display them
+        // Display web search results if available
         if (data.web_results && data.web_results.length > 0) {
+            console.log('[WebSearch] Displaying web results:', data.web_results);
             const webResultsTitle = document.createElement('div');
-            webResultsTitle.className = 'result-title web-results-title';
+            webResultsTitle.className = 'web-results-title';
             webResultsTitle.textContent = 'Web Search Results';
-            this.resultsWindow.appendChild(webResultsTitle);
+            this.resultsContent.appendChild(webResultsTitle);
             
             data.web_results.forEach(result => {
                 const resultElement = document.createElement('div');
                 resultElement.className = 'result-item web-result';
                 resultElement.innerHTML = `
-                    <div class="result-title">${result.title}</div>
-                    <div class="result-description">${result.snippet}</div>
-                    <a href="${result.link}" class="result-link" target="_blank">Read more</a>
+                    <div class="result-title">${result.title || 'Untitled'}</div>
+                    <div class="result-description">${result.snippet || 'No description available'}</div>
+                    ${result.link ? `<a href="${result.link}" class="result-link" target="_blank">Read more</a>` : ''}
                 `;
-                this.resultsWindow.appendChild(resultElement);
+                this.resultsContent.appendChild(resultElement);
             });
         }
 
-        this.resultsWindow.classList.add('active');
-    }
-
-    showLoadingState() {
-        this.searchButton.classList.add('loading');
-        this.resultsWindow.innerHTML = '<div class="result-item">Analyzing your query...</div>';
-        this.resultsWindow.classList.add('active');
-    }
-
-    hideLoadingState() {
-        this.searchButton.classList.remove('loading');
-    }
-
-    showError(message) {
-        this.resultsWindow.innerHTML = `<div class="result-item error">${message}</div>`;
-        this.resultsWindow.classList.add('active');
-    }
-
-    async _callChatAPI(query) {
-        try {
-            this.logger.info(`Calling chat API with query: ${query}`);
-            
-            const response = await fetch(`${this.baseUrl}${this.chatEndpoint}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({
-                    query: query,
-                    use_web_search: false
-                })
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(`Chat API error! status: ${response.status}, detail: ${errorData.detail || 'Unknown error'}`);
-            }
-
-            return await response.json();
-        } catch (error) {
-            this.logger.error(`Error calling chat API: ${error}`);
-            throw error;
+        // Only show "No Results" if we have no chat response and no web results
+        if (!data.chat_response && (!data.web_results || data.web_results.length === 0)) {
+            console.log('[WebSearch] No results found');
+            const noResultsElement = document.createElement('div');
+            noResultsElement.className = 'result-item';
+            noResultsElement.innerHTML = `
+                <div class="result-title">No Results</div>
+                <div class="result-description">No results found for your search query.</div>
+            `;
+            this.resultsContent.appendChild(noResultsElement);
         }
+        
+        // Show the results window
+        this.resultsWindow.classList.add('active');
     }
 
-    async _callWebSearchAPI(query) {
-        try {
-            this.logger.info(`Calling web search API with query: ${query}`);
-            
-            const response = await fetch(`${this.baseUrl}${this.websearchEndpoint}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({
-                    query: query
-                })
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(`Web search API error! status: ${response.status}, detail: ${errorData.detail || 'Unknown error'}`);
-            }
-
-            return await response.json();
-        } catch (error) {
-            this.logger.error(`Error calling web search API: ${error}`);
-            throw error;
+    displayError(message) {
+        if (!this.resultsContent) {
+            console.error('[WebSearch] Results content element not found');
+            return;
         }
+
+        this.resultsContent.innerHTML = `
+            <div class="result-item chat-response">
+                <div class="result-title">Error</div>
+                <div class="result-description">${message}</div>
+            </div>
+        `;
+        
+        this.resultsWindow.classList.add('active');
+    }
+
+    formatTextToBullets(text) {
+        if (!text) return '';
+        
+        // Split text into sentences
+        const sentences = text.split(/[.!?]+/).filter(s => s.trim());
+        
+        // Format each sentence as a bullet point
+        return sentences.map(sentence => `<p>${sentence.trim()}</p>`).join('');
     }
 }
 
@@ -316,54 +452,12 @@ function showNotification(message, type = 'info') {
 
 // Initialize WebSearch when the page loads
 document.addEventListener('DOMContentLoaded', () => {
+    // Create logger instance
+    const logger = new Logger('WebSearch');
+    
+    // Initialize WebSearch instance
     window.webSearch = new WebSearch();
+    
+    // Log initialization
+    logger.info('WebSearch initialized');
 });
-
-async function performSearch(query) {
-    try {
-        const response = await fetch('/api/search', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ query })
-        });
-        
-        const data = await response.json();
-        
-        if (data.type === 'combined') {
-            // Display the AI's combined analysis
-            const resultsWindow = document.getElementById('searchResultsWindow');
-            resultsWindow.innerHTML = `
-                <div class="alert alert-info">
-                    <h6>Analysis Context:</h6>
-                    <p>Using ${data.context.total_datasets} available datasets</p>
-                </div>
-                <div class="mt-3">
-                    <h6>Comprehensive Answer:</h6>
-                    <p>${data.answer.replace(/\n/g, '<br>')}</p>
-                </div>
-                <div class="mt-3">
-                    <h6>Web Search Results:</h6>
-                    ${data.web_results.map(result => `
-                        <div class="card mb-3">
-                            <div class="card-body">
-                                <h5 class="card-title">${result.title}</h5>
-                                <p class="card-text">${result.snippet}</p>
-                                <a href="${result.link}" class="btn btn-primary" target="_blank">Visit Source</a>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-        }
-    } catch (error) {
-        console.error('Search error:', error);
-        const resultsWindow = document.getElementById('searchResultsWindow');
-        resultsWindow.innerHTML = `
-            <div class="alert alert-danger">
-                Error: ${error.message}
-            </div>
-        `;
-    }
-} 

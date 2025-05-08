@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 import signal
 import time
 import psutil
+import socket
 
 # Setup Django environment
 BASE_DIR = Path(__file__).resolve().parent
@@ -31,6 +32,187 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+def is_port_in_use(port):
+    """Check if a port is in use"""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex(('localhost', port)) == 0
+
+def ensure_postgres_running():
+    """Ensure PostgreSQL is running on port 5540"""
+    if is_port_in_use(5540):
+        logger.info("PostgreSQL is already running on port 5540")
+        # Check if database exists
+        try:
+            result = subprocess.run([
+                'psql',
+                '-h', 'localhost',
+                '-p', '5540',
+                'postgres',
+                '-c', 'SELECT 1 FROM pg_database WHERE datname = \'pred_genai\';',
+                '-t'
+            ], check=True, capture_output=True, text=True)
+            if '1 row' in result.stdout:
+                logger.info("Database pred_genai exists")
+                return True
+            logger.info("Database pred_genai does not exist, will create it")
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Error checking database: {e.stderr}")
+            return False
+
+    logger.info("Starting PostgreSQL on port 5540...")
+    try:
+        # Create data directory if it doesn't exist
+        data_dir = BASE_DIR / 'postgres_data'
+        data_dir.mkdir(exist_ok=True)
+
+        # Initialize database if it doesn't exist
+        if not (data_dir / 'PG_VERSION').exists():
+            logger.info("Initializing PostgreSQL database...")
+            subprocess.run([
+                'initdb',
+                '-D', str(data_dir),
+                '--auth=trust'
+            ], check=True)
+
+            # Configure PostgreSQL to allow local connections
+            pg_hba_conf = data_dir / 'pg_hba.conf'
+            with open(pg_hba_conf, 'w') as f:
+                f.write("""# TYPE  DATABASE        USER            ADDRESS                 METHOD
+local   all             all                                     trust
+host    all             all             127.0.0.1/32            trust
+host    all             all             ::1/128                 trust
+""")
+
+            # Configure PostgreSQL to listen on localhost and disable GSSAPI
+            postgresql_conf = data_dir / 'postgresql.conf'
+            with open(postgresql_conf, 'w') as f:
+                f.write("""listen_addresses = 'localhost'
+port = 5540
+krb_server_keyfile = ''
+gss_accept_delegation = off
+ssl = off
+""")
+
+        # Start PostgreSQL
+        subprocess.Popen([
+            'postgres',
+            '-D', str(data_dir),
+            '-p', '5540'
+        ])
+
+        # Wait for PostgreSQL to start
+        max_retries = 30
+        for i in range(max_retries):
+            if is_port_in_use(5540):
+                logger.info("PostgreSQL started successfully")
+                break
+            time.sleep(1)
+        else:
+            logger.error("Failed to start PostgreSQL")
+            return False
+
+        # Wait for PostgreSQL to be ready to accept connections
+        max_retries = 30
+        for i in range(max_retries):
+            try:
+                subprocess.run([
+                    'psql',
+                    '-h', 'localhost',
+                    '-p', '5540',
+                    'postgres',
+                    '-c', 'SELECT 1;'
+                ], check=True, capture_output=True)
+                break
+            except subprocess.CalledProcessError:
+                if i == max_retries - 1:
+                    logger.error("PostgreSQL failed to accept connections")
+                    return False
+                time.sleep(1)
+
+        # Create database if it doesn't exist
+        try:
+            # First connect to postgres database to create our database
+            logger.info("Creating database pred_genai...")
+            
+            # Drop existing connections to the database
+            subprocess.run([
+                'psql',
+                '-h', 'localhost',
+                '-p', '5540',
+                'postgres',
+                '-c', """
+                SELECT pg_terminate_backend(pg_stat_activity.pid)
+                FROM pg_stat_activity
+                WHERE pg_stat_activity.datname = 'pred_genai'
+                AND pid <> pg_backend_pid();
+                """
+            ], check=True, capture_output=True)
+            
+            # Drop and recreate the database
+            subprocess.run([
+                'psql',
+                '-h', 'localhost',
+                '-p', '5540',
+                'postgres',
+                '-c', 'DROP DATABASE IF EXISTS pred_genai;'
+            ], check=True, capture_output=True)
+            
+            subprocess.run([
+                'psql',
+                '-h', 'localhost',
+                '-p', '5540',
+                'postgres',
+                '-c', 'CREATE DATABASE pred_genai OWNER glinskiyvadim;'
+            ], check=True, capture_output=True)
+            logger.info("Created database pred_genai")
+
+            # Grant all privileges to the user
+            subprocess.run([
+                'psql',
+                '-h', 'localhost',
+                '-p', '5540',
+                'pred_genai',
+                '-c', 'GRANT ALL PRIVILEGES ON DATABASE pred_genai TO glinskiyvadim;'
+            ], check=True, capture_output=True)
+            logger.info("Granted privileges to glinskiyvadim")
+
+            # Set up the database with proper transaction handling
+            subprocess.run([
+                'psql',
+                '-h', 'localhost',
+                '-p', '5540',
+                'pred_genai',
+                '-c', """
+                ALTER DATABASE pred_genai SET default_transaction_isolation TO 'read committed';
+                ALTER DATABASE pred_genai SET default_transaction_read_only TO off;
+                """
+            ], check=True, capture_output=True)
+            logger.info("Configured database transaction settings")
+
+            # Verify database exists and is accessible
+            result = subprocess.run([
+                'psql',
+                '-h', 'localhost',
+                '-p', '5540',
+                'pred_genai',
+                '-c', 'SELECT 1;'
+            ], check=True, capture_output=True, text=True)
+            
+            if '1 row' in result.stdout:
+                logger.info("Successfully verified database pred_genai is accessible")
+                return True
+            else:
+                logger.error("Database verification failed")
+                return False
+
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Error creating/verifying database: {e.stderr.decode()}")
+            return False
+
+    except Exception as e:
+        logger.error(f"Error starting PostgreSQL: {e}")
+        return False
 
 def kill_process_on_port(port):
     """Kill any process running on the specified port"""
@@ -150,6 +332,11 @@ def main():
     original_cwd = os.getcwd()
     
     try:
+        # Ensure PostgreSQL is running
+        if not ensure_postgres_running():
+            logger.error("Failed to start PostgreSQL")
+            sys.exit(1)
+
         # Kill any existing processes on both ports
         logger.info("Checking for existing processes...")
         kill_process_on_port(8000)  # Django port
@@ -186,20 +373,57 @@ def main():
             sys.exit(1)
         
         # Start Django server
-        from django.core.management import execute_from_command_line
-        execute_from_command_line(['manage.py', 'runserver'])
+        logger.info("Starting Django development server...")
+        manage_py = BASE_DIR / 'manage.py'
+        if not manage_py.exists():
+            logger.error(f"manage.py not found at {manage_py}")
+            sys.exit(1)
+            
+        logger.info(f"Using manage.py at: {manage_py}")
+        django_process = subprocess.Popen(
+            [sys.executable, str(manage_py), 'runserver', '0.0.0.0:8000'],
+            cwd=str(BASE_DIR),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
         
-    except KeyboardInterrupt:
-        logger.info("\nShutting down servers...")
-        if 'fastapi_process' in locals():
+        # Check if Django server started successfully
+        time.sleep(2)
+        if django_process.poll() is not None:
+            stdout, stderr = django_process.communicate()
+            logger.error(f"Django server failed to start. Exit code: {django_process.returncode}")
+            logger.error(f"stdout: {stdout}")
+            logger.error(f"stderr: {stderr}")
+            sys.exit(1)
+            
+        logger.info("Django server started successfully")
+        
+        # Wait for both processes
+        try:
+            while True:
+                if fastapi_process.poll() is not None:
+                    logger.error("FastAPI server stopped unexpectedly")
+                    break
+                if django_process.poll() is not None:
+                    logger.error("Django server stopped unexpectedly")
+                    break
+                time.sleep(1)
+        except KeyboardInterrupt:
+            logger.info("\nShutting down servers...")
             fastapi_process.terminate()
+            django_process.terminate()
             fastapi_process.wait()
+            django_process.wait()
         
     except Exception as e:
         logger.error(f"Error starting servers: {e}")
         if 'fastapi_process' in locals():
             fastapi_process.terminate()
             fastapi_process.wait()
+        if 'django_process' in locals():
+            django_process.terminate()
+            django_process.wait()
         sys.exit(1)
         
     finally:

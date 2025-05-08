@@ -46,6 +46,21 @@ class WebSearchService:
         filter_context: If True, filters results based on similarity during search
         """
         try:
+            # Check if the query requires data analysis
+            analysis_keywords = ['analyze', 'analysis', 'sql', 'python', 'data', 'database', 'query', 'table', 'column', 'select', 'from', 'where', 'join']
+            requires_analysis = any(keyword in query.lower() for keyword in analysis_keywords)
+            
+            if requires_analysis:
+                try:
+                    # Try to get context embedding for data analysis
+                    context_embedding = self.get_context_embedding(query)
+                    if not context_embedding:
+                        logger.info("No context embedding found, falling back to general search")
+                        return self._perform_general_search(query, num_results)
+                except Exception as e:
+                    logger.info(f"Error in data analysis, falling back to general search: {str(e)}")
+                    return self._perform_general_search(query, num_results)
+            
             # Check cache first
             cache_key = f"{query}_{num_results}_{filter_context}"
             if cache_key in self.search_results_cache:
@@ -57,197 +72,109 @@ class WebSearchService:
             # Initialize RAG and get context if filtering is enabled
             enhanced_query = query
             context_embedding = None
-            candidate_results = []  # Store all potentially good results
+            candidate_results = []
             
             if filter_context:
-                context_embedding = self.get_context_embedding(query)
-                
-                if not context_embedding:
-                    logger.warning("No context embedding found")
-                    return []
-                
-                # Generate context embedding once
-                context_text = ' '.join(context_embedding['documents'][0][:10])  # Combine top 3 documents
-                
-                # Extract key concepts and terms from context
-                concept_prompt = f"""
-                Analyze this text and extract:
-                1. Main topics and concepts (3-4 key phrases)
-                2. Technical terms or jargon
-                3. Important names, organizations, or entities
-                4. Specific details that should be matched in search results
-
-                Text: {context_text}
-
-                Format the response as a list of search-optimized terms and phrases.
-                """
-                
-                concept_response = self.openai_client.chat.completions.create(
-                    model=settings.GPT_MODEL_NAME,
-                    messages=[{"role": "user", "content": concept_prompt}],
-                    temperature=settings.DEFAULT_TEMPERATURE,
-                    max_tokens=150
-                )
-                
-                search_terms = concept_response.choices[0].message.content
-                logger.info(f"Extracted search terms: {search_terms}")
-                
-                # Create a more focused search query
-                enhanced_query = f'"{query}" ({search_terms})'
-                logger.info(f"Enhanced search query: {enhanced_query}")
-                
-            page = 1
-            max_attempts = 10  # Maximum number of search pages to try
-            consecutive_empty_pages = 0  # Track pages without valid results
-
-            # Use Google Custom Search API with enhanced query and pagination
-            search_url = "https://www.googleapis.com/customsearch/v1"
-            GOOGLE_API_KEY = "AIzaSyDctFXmLx_HK-EFl-oydmS7lbNy4LqLDTc"
-            SEARCH_ENGINE_ID = "72d32c5973c70499e"            
-
-            while page <= max_attempts and consecutive_empty_pages < 3:  # Google only allows up to 100 results (10 pages)
-                logger.info(f"Searching page {page}")
-                
-                params = {
-                    'key': GOOGLE_API_KEY,
-                    'cx': SEARCH_ENGINE_ID,
-                    'q': enhanced_query,
-                    'num': 10,
-                    'start': ((page - 1) * 10) + 1,
-                    'fields': 'items(title,link,snippet)',
-                    'prettyPrint': False,
-                    'exactTerms': query,
-                }
-                
-                response = requests.get(search_url, params=params, timeout=5)
-                logger.info(f"Search API response status: {response.status_code} for page {page}")
-                
-                if not response.ok:
-                    logger.error(f"Search API error: {response.text}")
-                    page += 1
-                    consecutive_empty_pages += 1
-                    continue
-
-                results = response.json()
-                
-                if not isinstance(results, dict):
-                    logger.error(f"Results is not a dictionary: {type(results)}")
-                    continue
-                
-                if 'items' not in results:
-                    logger.info(f"No items in search results for page {page}")
-                    page += 1
-                    consecutive_empty_pages += 1
-                    continue
-
-                items = results.get('items', [])
-                if not isinstance(items, list):
-                    logger.error(f"Items is not a list: {type(items)}")
-                    continue
-
-                found_valid_result = False
-                
-                # Process results one at a time
-                for item in items:
-                    try:
-                        # Ensure we have valid item data
-                        if not isinstance(item, dict):
-                            logger.warning(f"Invalid item format: {item}")
-                            continue
-
-                        result = {
-                            'url': str(item.get('link', '')),
-                            'title': str(item.get('title', '')),
-                            'summary': str(item.get('snippet', '')),
-                            'timestamp': time.strftime('%Y-%m-%d'),
-                            'source': 'google_search'
-                        }
-                        
-                        if not (result['url'] and result['title'] and result['summary']):
-                            logger.warning("Missing required fields in search result")
-                            continue
-
-                        # Calculate similarity if context is available
-                        if filter_context and context_embedding:
-                            result_text = f"{result['title']}\n{result['summary']}"
-                            try:
-                                # Get embedding for result text
-                                response = self.openai_client.embeddings.create(
-                                    input=result_text,
-                                    model=settings.EMBEDDING_MODEL_NAME
-                                )
-                                
-                                # Access the embedding from the response
-                                if not response or not response.data or not response.data[0]:
-                                    logger.warning(f"No valid embedding response for result: {result['title']}")
-                                    continue
-                                
-                                result_embedding = response.data[0].embedding
-                            except Exception as embed_error:
-                                logger.error(f"Error getting embedding for result: {str(embed_error)}")
-                                continue
-                            
-                            if not result_embedding:
-                                logger.warning(f"No embedding generated for result: {result['title']}")
-                                continue
-                            
-                            context_embedding_vector = context_embedding['embedding']
-                            if not context_embedding_vector:
-                                logger.warning("No embedding vector in context")
-                                continue
-                            
-                            if not isinstance(result_embedding, (list, np.ndarray)):
-                                logger.warning(f"Invalid result embedding type: {type(result_embedding)}")
-                                continue
-                            
-                            similarity = self._calculate_cosine_similarity(context_embedding_vector, result_embedding)
-                            logger.info(f"Similarity score for {result['title']}: {similarity}")
-                            
-                            if similarity <= settings.MIN_SIMILARITY_SCORE:
-                                logger.info(f"Skipping result due to low similarity: {result['title']}")
-                                continue
-                            
-                            result['similarity_score'] = similarity
-                            found_valid_result = True
-                            candidate_results.append(result)
-                            logger.info(f"Added candidate result: {result['title']} with score {similarity}")
-                        else:
-                            candidate_results.append(result)
-                            found_valid_result = True
-                            
-                    except Exception as e:
-                        logger.error(f"Error processing search result: {str(e)}")
-                        continue
-                
-                logger.info(f"Processed page {page}, found {len(candidate_results)} total candidates so far")
-                
-                if found_valid_result:
-                    consecutive_empty_pages = 0
-                else:
-                    consecutive_empty_pages += 1
+                try:
+                    context_embedding = self.get_context_embedding(query)
                     
-                page += 1
+                    if not context_embedding:
+                        logger.warning("No context embedding found, falling back to general search")
+                        return self._perform_general_search(query, num_results)
+                    
+                    # Generate context embedding once
+                    context_text = ' '.join(context_embedding['documents'][0][:10])  # Combine top 3 documents
+                    
+                    # Extract key concepts and terms from context
+                    concept_prompt = f"""
+                    Analyze this text and extract:
+                    1. Main topics and concepts (3-4 key phrases)
+                    2. Technical terms or jargon
+                    3. Important names, organizations, or entities
+                    4. Specific details that should be matched in search results
 
-            # Sort all candidates by similarity score
-            if filter_context:
-                candidate_results.sort(key=lambda x: x.get('similarity_score', 0), reverse=True)
-                logger.info("Sorted candidates by similarity score")
-                
-                # Log top scores for debugging
-                for i, result in enumerate(candidate_results[:num_results]):
-                    logger.info(f"Top {i+1} result: {result['title']} - Score: {result.get('similarity_score', 0)}")
+                    Text: {context_text}
 
-            # Select top results
-            final_results = candidate_results[:num_results]
+                    Format the response as a list of search-optimized terms and phrases.
+                    """
+                    
+                    concept_response = self.openai_client.chat.completions.create(
+                        model=settings.GPT_MODEL_NAME,
+                        messages=[{"role": "user", "content": concept_prompt}],
+                        temperature=settings.DEFAULT_TEMPERATURE,
+                        max_tokens=150
+                    )
+                    
+                    search_terms = concept_response.choices[0].message.content
+                    logger.info(f"Extracted search terms: {search_terms}")
+                    
+                    # Create a more focused search query
+                    enhanced_query = f'"{query}" ({search_terms})'
+                    logger.info(f"Enhanced search query: {enhanced_query}")
+                except Exception as e:
+                    logger.warning(f"Error in context processing, falling back to general search: {str(e)}")
+                    return self._perform_general_search(query, num_results)
+            
+            # Perform the search
+            results = self._perform_general_search(enhanced_query, num_results)
             
             # Cache the results
-            self.search_results_cache[cache_key] = (time.time(), final_results)
-            logger.info(f"Cached {len(final_results)} results from {len(candidate_results)} candidates")
+            self.search_results_cache[cache_key] = (time.time(), results)
+            logger.info(f"Cached {len(results)} results")
             
-            return final_results
+            return results
                 
         except Exception as e:
             logger.error(f"Search error: {str(e)}")
+            return self._perform_general_search(query, num_results)
+
+    def _perform_general_search(self, query: str, num_results: int = 10) -> List[Dict[str, Any]]:
+        """Perform a general web search without data analysis"""
+        try:
+            # Use Google Custom Search API
+            search_url = "https://www.googleapis.com/customsearch/v1"
+            GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
+            SEARCH_ENGINE_ID = os.getenv('SEARCH_ENGINE_ID')
+            
+            if not GOOGLE_API_KEY or not SEARCH_ENGINE_ID:
+                logger.error("Google API credentials not configured")
+                return []
+
+            params = {
+                'key': GOOGLE_API_KEY,
+                'cx': SEARCH_ENGINE_ID,
+                'q': query,
+                'num': num_results,
+                'fields': 'items(title,link,snippet)',
+                'prettyPrint': False
+            }
+            
+            response = requests.get(search_url, params=params, timeout=5)
+            
+            if not response.ok:
+                logger.error(f"Search API error: {response.text}")
+                return []
+
+            results = response.json()
+            items = results.get('items', [])
+            
+            formatted_results = []
+            for item in items:
+                if isinstance(item, dict):
+                    result = {
+                        'url': str(item.get('link', '')),
+                        'title': str(item.get('title', '')),
+                        'summary': str(item.get('snippet', '')),
+                        'timestamp': time.strftime('%Y-%m-%d'),
+                        'source': 'google_search'
+                    }
+                    if result['url'] and result['title'] and result['summary']:
+                        formatted_results.append(result)
+            
+            return formatted_results
+            
+        except Exception as e:
+            logger.error(f"Error in general search: {str(e)}")
             return []
 
     def _check_robots_txt(self, url: str) -> bool:

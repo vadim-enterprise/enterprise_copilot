@@ -11,21 +11,44 @@
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     
     <!-- JavaScript Dependencies -->
-    <!-- <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script> -->
-    <script src="{% static 'js/speech_manager.js' %}"></script>
-    <script src="{% static 'js/chatbot.js' %}"></script>
-    <script src="{% static 'js/search.js' %}"></script>
-    <script src="{% static 'js/file_upload.js' %}"></script>    
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://unpkg.com/topojson@3"></script>
+    <script src="https://d3js.org/d3-geo.v3.min.js"></script>
 </head>
 <body>
     <div id="notification-container" class="notification-container"></div>
     
     <!-- Main Content Area -->
     <main class="main-content">
+        <!-- US Map Container -->
+        <div class="map-container">
+            <div class="map-section">
+                <div class="map-section-header">Churn warning in Fields Sales</div>
+                <div class="map-section-content">
+                    <!-- Section 1 content -->
+                </div>
+            </div>
+            <div class="map-section">
+                <div class="map-section-header">Competitor dropped prices</div>
+                <div class="map-section-content">
+                    <!-- Section 2 content -->
+                </div>
+            </div>
+            <div class="map-section">
+                <div class="map-section-header">Manufacturing segement growth is declining</div>
+                <div class="map-section-content">
+                    <!-- Section 3 content -->
+                </div>
+            </div>
+        </div>
 
         <!-- Search Results Window -->
         <div class="search-results-window" id="searchResultsWindow">
-            <!-- Results will be dynamically inserted here -->
+            <div class="search-results-header">
+                <h3 class="search-results-title">Search Results</h3>
+                <button class="search-results-close">&times;</button>
+            </div>
+            <div class="search-results-content"></div>
         </div>
 
         <!-- Centered Search -->
@@ -43,33 +66,27 @@
         </div>
     </main>
 
-    <!-- Chatbot Widget (Unchanged) -->
-    <div class="chatbot-widget" id="chatbotWidget">
-        <div class="chatbot-header" id="chatbotHeader">
-            <div class="chatbot-title">ToolsHub Assistant</div>
-            <div class="chatbot-controls">
-                <button class="voice-bot-btn" id="voiceBotToggle" title="Switch to Voice Bot">🎤</button>
-                <button class="enrich-kb-btn" id="enrichKnowledgeBase" title="Enrich Knowledge Base">📚</button>
-                <button class="minimize-btn" id="minimizeChatbot">−</button>
-            </div>
+    <!-- Chatbot Widget -->
+    <div id="chatbot-widget" class="chatbot-widget">
+        <div class="chatbot-header">
+            <h3>AI Assistant</h3>
+            <button class="chatbot-toggle">−</button>
         </div>
-        <div class="chatbot-container" id="chatbotContainer">
-            <div class="chatbot-messages" id="chatbotMessages">
-                <div class="message bot-message">
-                    <div class="message-content">
-                        Hello! I'm your ToolsHub assistant. How can I help you find the right software solutions?
-                    </div>
-                </div>
-            </div>
+        <div class="chatbot-body">
+            <div class="chatbot-messages"></div>
             <div class="chatbot-input">
-                <form id="chatbotForm">
-                    <input type="text" id="chatbotInput" placeholder="Type your message...">
-                    <button type="submit">
-                        <span class="send-icon">📤</span>
-                    </button>
-                </form>
+                <input type="text" placeholder="Type your message...">
+                <button class="voice-bot-toggle" title="Toggle Voice Mode">🎤</button>
+                <button class="mic-button" title="Start/Stop Recording" style="display: none;">🎙️</button>
+                <button class="send-button">Send</button>
             </div>
         </div>
     </div>
+
+    <!-- JavaScript -->
+    <script src="{% static 'js/search.js' %}"></script>
+    <script src="{% static 'js/chatbot.js' %}"></script>
+    <script src="{% static 'js/speech_manager.js' %}"></script>
+    <script src="{% static 'js/file_upload.js' %}"></script>
 </body>
 </html>

@@ -10,6 +10,8 @@ from django.conf import settings
 from pathlib import Path
 from typing import Dict, Any, List
 from openai import OpenAI
+from .database import Database
+from .vector_store import VectorStore
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +30,17 @@ class RAGService:
         self.data_dir.mkdir(parents=True, exist_ok=True)
         logger.info(f"RAG Service using knowledge base directory: {self.data_dir}")
         self.context_service = ContextService()
+        self.openai_client = OpenAI()
+        
+        # Initialize database and vector store
+        try:
+            self.db = Database()
+            self.vector_store = VectorStore()
+            logger.info("Successfully initialized database and vector store")
+        except Exception as e:
+            logger.error(f"Error initializing database or vector store: {str(e)}")
+            self.db = None
+            self.vector_store = None
 
     def add_to_history(self, user_input, bot_response):
         """Add the latest user input and bot response to the conversation history."""
@@ -447,4 +460,36 @@ class RAGService:
             return {
                 "status": "error",
                 "detail": f"Failed to process query: {str(e)}"
-            } 
+            }
+
+    async def process_query(self, query: str) -> str:
+        """Process a query that requires data analysis"""
+        try:
+            # Your existing RAG processing logic here
+            response = self.openai_client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[{"role": "user", "content": query}],
+                temperature=0.7,
+                max_tokens=500
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            logger.error(f"Error in process_query: {str(e)}")
+            raise
+
+    async def process_general_query(self, query: str) -> str:
+        """Process a general query using ChatGPT"""
+        try:
+            response = self.openai_client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "You are a helpful AI assistant. Provide clear, concise, and accurate responses to user questions."},
+                    {"role": "user", "content": query}
+                ],
+                temperature=0.7,
+                max_tokens=500
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            logger.error(f"Error in process_general_query: {str(e)}")
+            raise 
