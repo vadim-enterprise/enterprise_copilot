@@ -1,53 +1,58 @@
-import os
-from sqlalchemy import create_engine, text
+import psycopg2
+from psycopg2.extras import RealDictCursor
 import logging
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Database connection
-DATABASE_URL = 'postgresql://glinskiyvadim@localhost:5540/pred_genai'
-engine = create_engine(DATABASE_URL)
-
-def test_connection():
+def test_db_connection():
     try:
-        # Test basic connection
-        with engine.connect() as conn:
-            logger.info("Successfully connected to database")
+        logger.info("Attempting to connect to PostgreSQL database...")
+        conn = psycopg2.connect(
+            host="localhost",
+            port=5541,
+            database="tile_analytics",
+            user="glinskiyvadim"
+        )
+        logger.info("Successfully connected to PostgreSQL database")
+        
+        # Test if we can query the table
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Check if table exists
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_name = 'tile_data'
+            );
+        """)
+        table_exists = cur.fetchone()['exists']
+        
+        if not table_exists:
+            logger.error("tile_data table does not exist")
+            return False
             
-            # Test if we can create a table
-            conn.execute(text("""
-                CREATE TABLE IF NOT EXISTS test_table (
-                    id SERIAL PRIMARY KEY,
-                    test_column VARCHAR(255)
-                )
-            """))
-            logger.info("Successfully created test table")
-            
-            # Test if we can insert data
-            conn.execute(text("""
-                INSERT INTO test_table (test_column) VALUES ('test_value')
-            """))
-            logger.info("Successfully inserted test data")
-            
-            # Test if we can read data
-            result = conn.execute(text("SELECT * FROM test_table"))
-            rows = result.fetchall()
-            logger.info(f"Successfully read test data: {rows}")
-            
-            # Clean up
-            conn.execute(text("DROP TABLE test_table"))
-            logger.info("Successfully cleaned up test table")
-            
-            return True
-            
+        # Try to fetch some data
+        cur.execute("SELECT * FROM tile_data ORDER BY id")
+        tiles = cur.fetchall()
+        logger.info(f"Successfully fetched {len(tiles)} tiles")
+        
+        # Print the first tile as a sample
+        if tiles:
+            logger.info(f"Sample tile data: {dict(tiles[0])}")
+        
+        cur.close()
+        conn.close()
+        return True
+        
     except Exception as e:
-        logger.error(f"Database connection test failed: {str(e)}")
+        logger.error(f"Error: {str(e)}")
         return False
 
 if __name__ == "__main__":
-    test_connection() 
+    success = test_db_connection()
+    if success:
+        logger.info("Database connection test passed!")
+    else:
+        logger.error("Database connection test failed!") 

@@ -1,0 +1,1 @@
+/opt/homebrew/Cellar/postgresql@14/14.17_1/bin/postgres "-D" "/Users/glinskiyvadim/pred_genai/postgres_tile_data" "-p" "5541" "-c" "listen_addresses=localhost"

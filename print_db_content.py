@@ -3,7 +3,7 @@ from sqlalchemy import create_engine, text, inspect
 import pandas as pd
 
 # Database connection
-DATABASE_URL = 'postgresql://glinskiyvadim@localhost:5540/pred_genai'
+DATABASE_URL = 'postgresql://glinskiyvadim@localhost:5541/tile_analytics'
 engine = create_engine(DATABASE_URL)
 
 def print_database_content():

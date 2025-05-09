@@ -22,6 +22,7 @@ from fastapi.responses import JSONResponse, FileResponse
 from fastapi.templating import Jinja2Templates
 from .routers import websearch_router
 from .routers.speech_router import router as speech_router
+from .routers.tile_router import router as tile_router
 from .services.websearch_service import WebSearchService
 import logging
 from typing import Dict, Any
@@ -30,6 +31,8 @@ import time
 from openai import OpenAI
 from .api import chat, files
 from .settings import ALLOWED_ORIGINS, HOST, PORT
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
 # Create a router for speech-related endpoints
 from fastapi import APIRouter
@@ -45,13 +48,13 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
-# Add CORS middleware
+# Add CORS middleware with more permissive settings for development
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://127.0.0.1:8000", "http://localhost:8000"],
-    allow_credentials=False,
-    allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["*"],
+    allow_origins=["*"],  # Allow all origins in development
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all methods
+    allow_headers=["*"],  # Allow all headers
 )
 
 # Initialize OpenAI client
@@ -71,6 +74,7 @@ app.include_router(speech_router, prefix="/api/speech", tags=["speech"])
 app.include_router(rag_router, prefix="/api/rag", tags=["rag"])
 app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
 app.include_router(files.router, prefix="/api/files", tags=["files"])
+app.include_router(tile_router, prefix="/api", tags=["tiles"])
 
 # RAG endpoints
 @rag_router.post("/enrich")
@@ -376,12 +380,14 @@ async def root():
 
 @app.get("/api/health-check")
 async def health_check():
+    """Health check endpoint"""
     return {
         "status": "ok",
         "services": {
             "chat": "available",
             "speech": "available",
-            "files": "available"
+            "files": "available",
+            "tiles": "available"
         }
     }
 
@@ -469,3 +475,24 @@ async def text_query_options():
             "Access-Control-Allow-Credentials": "false"
         }
     )
+
+def get_db_connection():
+    return psycopg2.connect(
+        host="localhost",
+        port=5541,
+        database="tile_analytics",
+        user="glinskiyvadim"
+    )
+
+@app.get("/api/tiles")
+async def get_tiles():
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("SELECT * FROM tile_data ORDER BY id")
+        tiles = cur.fetchall()
+        cur.close()
+        conn.close()
+        return {"tiles": [dict(tile) for tile in tiles]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
