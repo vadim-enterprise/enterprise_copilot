@@ -4,12 +4,10 @@ import logging
 from openai import OpenAI
 from fastapi import HTTPException
 import uuid
-import json
 from typing import Dict, Any
 import asyncio
-from aiortc import RTCPeerConnection, RTCSessionDescription, MediaStreamTrack
-from aiortc.contrib.media import MediaBlackhole, MediaPlayer, MediaRecorder
-from django.conf import settings
+from aiortc import RTCPeerConnection, RTCSessionDescription
+from aiortc.contrib.media import MediaRecorder
 import aiohttp
 
 logger = logging.getLogger(__name__)

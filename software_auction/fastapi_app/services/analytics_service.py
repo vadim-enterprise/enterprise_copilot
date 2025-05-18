@@ -1,20 +1,53 @@
 import pandas as pd
 import numpy as np
-from sklearn.linear_model import LinearRegression
-from sklearn.preprocessing import StandardScaler
 from sqlalchemy import create_engine, text
 import os
-from typing import Dict, List, Union, Tuple
+from typing import Dict, Union, Any, List, Optional
 import logging
+from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans
+from sklearn.ensemble import IsolationForest
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
+import re
+from software_auction.fastapi_app.rag.hybrid_rag import HybridRAG
+import json
+from pathlib import Path
+from datetime import datetime
+
+class DateTimeEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super().default(obj)
 
 logger = logging.getLogger(__name__)
 
 class AnalyticsService:
     def __init__(self):
+        self.rag = HybridRAG()        
         self.logger = logging.getLogger(__name__)
         self.engine = create_engine(
             f"postgresql://{os.getenv('DB_USER')}@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}"
         )
+        # Use the same engine for tile_analytics since it's now in the main database
+        self.tile_analytics_engine = self.engine
+        
+        # Load company info from JSON file
+        self.company_info = self._load_company_info()
+
+    def _load_company_info(self) -> Dict[str, str]:
+        """Load company information from JSON file"""
+        try:
+            json_path = Path(__file__).parent.parent / 'data' / 'company_info.json'
+            with open(json_path, 'r') as f:
+                data = json.load(f)
+                # Convert list to dictionary for easier lookup
+                return {company['name']: company['company_description'] 
+                       for company in data['companies']}
+        except Exception as e:
+            self.logger.error(f"Error loading company info from JSON: {str(e)}")
+            return {}
 
     def analyze_data(self, query: str) -> Dict:
         """
@@ -58,40 +91,37 @@ class AnalyticsService:
         Extract relevant data from the database based on the query.
         """
         try:
-            # First get table information
+            # Get the most recent CSV data table
             with self.engine.connect() as conn:
-                tables_query = text("""
-                    SELECT table_name, column_names 
-                    FROM csv_metadata 
-                    ORDER BY upload_date DESC
-                """)
-                result = conn.execute(tables_query)
-                tables = []
-                for row in result:
-                    # Convert row to dictionary properly
-                    table_info = {
-                        'table_name': row[0],
-                        'column_names': row[1]
-                    }
-                    tables.append(table_info)
-
-            if not tables:
-                raise ValueError("No tables found in the database")
-
-            # Get the most recent table
-            latest_table = tables[0]
-            table_name = latest_table['table_name']
-            
-            # Fetch all data from the table
-            with self.engine.connect() as conn:
-                # Convert column_names from string to list if it's stored as a string
-                if isinstance(latest_table['column_names'], str):
-                    column_names = latest_table['column_names'].strip('{}').split(',')
-                else:
-                    column_names = latest_table['column_names']
+                # Find the most recent CSV data table
+                result = conn.execute(text("""
+                    SELECT table_name 
+                    FROM information_schema.tables 
+                    WHERE table_name LIKE 'csv_data_%'
+                    ORDER BY table_name DESC
+                    LIMIT 1
+                """))
+                table_info = result.fetchone()
+                
+                if not table_info:
+                    raise ValueError("No CSV data tables found in the database")
+                
+                table_name = table_info[0]
+                
+                # Get column information
+                result = conn.execute(text("""
+                    SELECT column_name 
+                    FROM information_schema.columns 
+                    WHERE table_name = :table_name
+                """), {'table_name': table_name})
+                
+                columns = [row[0] for row in result]
+                
+                if not columns:
+                    raise ValueError(f"No columns found in table {table_name}")
                 
                 # Create a proper SQL query with explicit column names
-                columns_str = ', '.join(f'"{col}"' for col in column_names)
+                columns_str = ', '.join(f'"{col}"' for col in columns)
                 query = f'SELECT {columns_str} FROM "{table_name}"'
                 
                 # Execute query and convert to DataFrame
@@ -185,237 +215,516 @@ class AnalyticsService:
             logger.error(f"Error in Python analysis: {str(e)}")
             raise
 
-    def _perform_regression(self, df: pd.DataFrame, query: str) -> Dict:
+    def _populate_company_info(self, data: pd.DataFrame) -> bool:
         """
-        Perform regression analysis.
+        Update company information in the JSON file based on the dataset
+        
+        Args:
+            data: DataFrame containing company data
+            
+        Returns:
+            bool: True if successful, False otherwise
         """
         try:
-            # Get numeric columns
-            numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+            self.logger.info(f"Starting to update company info with {len(data)} records")
             
-            if len(numeric_cols) < 2:
-                raise ValueError("Not enough numeric columns for regression analysis")
-
-            # Determine target and feature columns based on query
-            query_lower = query.lower()
+            # Check for required name column
+            if 'name' not in data.columns:
+                self.logger.error("Missing required column: name")
+                return False
             
-            # Try to identify target variable from query
-            target_col = None
-            for col in numeric_cols:
-                if col.lower() in query_lower:
-                    target_col = col
-                    break
+            # Prepare company descriptions
+            companies = []
+            for _, row in data.iterrows():
+                try:
+                    name = row['name']
+                    description_parts = [f"{name}"]
+                    
+                    # Add industry if available
+                    if 'industry' in row and pd.notna(row['industry']):
+                        description_parts.append(f"is a {row['industry']} company")
+                    
+                    # Add employee count if available
+                    if 'employee_count' in row and pd.notna(row['employee_count']):
+                        description_parts.append(f"with {row['employee_count']} employees")
+                    
+                    # Add location if available
+                    if 'location' in row and pd.notna(row['location']):
+                        description_parts.append(f"located in {row['location']}")
+                    
+                    # Add churn rate if available
+                    if 'churn_rate' in row and pd.notna(row['churn_rate']):
+                        description_parts.append(f"has a churn rate of {row['churn_rate']*100:.1f}%")
+                    
+                    # Add revenue information
+                    revenue_info = []
+                    if 'revenue_millions' in row and pd.notna(row['revenue_millions']):
+                        revenue_info.append(f"${row['revenue_millions']:.1f}M in revenue")
+                    if 'arr' in row and pd.notna(row['arr']):
+                        revenue_info.append(f"${row['arr']:,.0f} in ARR")
+                    if revenue_info:
+                        description_parts.append(f"generates {' and '.join(revenue_info)}")
+                    
+                    # Add contract value if available
+                    if 'avg_contract_value' in row and pd.notna(row['avg_contract_value']):
+                        description_parts.append(f"with an average contract value of ${row['avg_contract_value']:,.0f}")
+                    
+                    # Add additional metrics if available
+                    additional_metrics = []
+                    if 'customer_satisfaction' in row and pd.notna(row['customer_satisfaction']):
+                        additional_metrics.append(f"{row['customer_satisfaction']}% customer satisfaction")
+                    if 'growth_rate' in row and pd.notna(row['growth_rate']):
+                        additional_metrics.append(f"{row['growth_rate']*100:.1f}% growth rate")
+                    if additional_metrics:
+                        description_parts.append(f"with {', '.join(additional_metrics)}")
+                    
+                    # Combine all parts into a description
+                    description = ' '.join(description_parts) + '.'
+                    
+                    companies.append({
+                        'name': name,
+                        'company_description': description,
+                        'metrics': {
+                            'industry': row.get('industry'),
+                            'employee_count': row.get('employee_count'),
+                            'location': row.get('location'),
+                            'churn_rate': float(row['churn_rate']) if 'churn_rate' in row and pd.notna(row['churn_rate']) else None,
+                            'revenue_millions': float(row['revenue_millions']) if 'revenue_millions' in row and pd.notna(row['revenue_millions']) else None,
+                            'arr': float(row['arr']) if 'arr' in row and pd.notna(row['arr']) else None,
+                            'avg_contract_value': float(row['avg_contract_value']) if 'avg_contract_value' in row and pd.notna(row['avg_contract_value']) else None,
+                            'customer_satisfaction': float(row['customer_satisfaction']) if 'customer_satisfaction' in row and pd.notna(row['customer_satisfaction']) else None,
+                            'growth_rate': float(row['growth_rate']) if 'growth_rate' in row and pd.notna(row['growth_rate']) else None
+                        }
+                    })
+                    self.logger.info(f"Prepared data for company: {name}")
+                except Exception as row_error:
+                    self.logger.error(f"Error processing row for company {row.get('name', 'unknown')}: {str(row_error)}")
+                    continue
             
-            # If no target found in query, use the last numeric column
-            if not target_col:
-                target_col = numeric_cols[-1]
+            # Create data directory if it doesn't exist
+            json_path = Path(__file__).parent.parent / 'data'
+            json_path.mkdir(parents=True, exist_ok=True)
             
-            # Use remaining numeric columns as features
-            feature_cols = [col for col in numeric_cols if col != target_col]
+            # Write to JSON file
+            json_file = json_path / 'company_info.json'
+            with open(json_file, 'w') as f:
+                json.dump({'companies': companies}, f, indent=4, cls=DateTimeEncoder)
             
-            if not feature_cols:
-                raise ValueError("No feature columns available for regression")
-
-            # Prepare data
-            X = df[feature_cols]
-            y = df[target_col]
-
-            # Handle missing values
-            X = X.fillna(X.mean())
-            y = y.fillna(y.mean())
-
-            # Scale features
-            scaler = StandardScaler()
-            X_scaled = scaler.fit_transform(X)
-
-            # Fit regression model
-            model = LinearRegression()
-            model.fit(X_scaled, y)
-
-            # Calculate predictions
-            y_pred = model.predict(X_scaled)
-
-            # Calculate metrics
-            r2_score = model.score(X_scaled, y)
+            # Update in-memory company info
+            self.company_info = {company['name']: company['company_description'] 
+                               for company in companies}
             
-            # Create coefficients dictionary properly
-            coefficients = {}
-            for feature, coef in zip(feature_cols, model.coef_):
-                coefficients[feature] = float(coef)
+            self.logger.info(f"Successfully updated company info with {len(companies)} records")
+            return True
+                
+        except Exception as e:
+            self.logger.error(f"Error updating company info: {str(e)}")
+            return False
 
-            # Calculate additional metrics
-            mse = np.mean((y - y_pred) ** 2)
-            rmse = np.sqrt(mse)
-            mae = np.mean(np.abs(y - y_pred))
-
-            # Calculate feature importance
-            feature_importance = {}
-            for feature, coef in zip(feature_cols, np.abs(model.coef_)):
-                feature_importance[feature] = float(coef)
+    def handle_csv_upload(self, file_path: str) -> Dict[str, Any]:
+        """Process a newly uploaded CSV file with analytics
+        
+        Args:
+            file_path: Path to the uploaded CSV file
             
-            # Sort feature importance
-            sorted_features = sorted(feature_importance.items(), key=lambda x: x[1], reverse=True)
-            feature_importance = dict(sorted_features)
+        Returns:
+            Dictionary with processing results
+        """
+        try:
+            # Read the CSV file
+            df = pd.read_csv(file_path)
+            
+            if df.empty:
+                return {
+                    "success": False,
+                    "message": "CSV file is empty"
+                }
+            
+            self.logger.info("Found company data, updating company_info.json")
+            success = self._populate_company_info(df)
+            if not success:
+                self.logger.error("Failed to update company_info.json")
+                return {
+                    "success": False,
+                    "message": "Failed to update company information"
+                }
+            
+            # Create tiles based on company metrics
+            try:
+                # Get company info from JSON
+                json_path = Path(__file__).parent.parent / 'data' / 'company_info.json'
+                with open(json_path, 'r') as f:
+                    company_data = json.load(f)
+                
+                # Create tiles for each company
+                for company in company_data['companies']:
+                    metrics = company['metrics']
+                    
+                    # Create red tile for high churn risk
+                    churn_rate = metrics.get('churn_rate')
+                    if churn_rate is not None and churn_rate > 0.1:  # 10% churn rate
+                        self.write_to_tile_analytics({
+                            'name': company['name'],
+                            'category': 'churn_risk',
+                            'color': 'red',
+                            'title': 'High Churn Risk',
+                            'description': f'Churn rate is {churn_rate:.1%}. Immediate attention required.',
+                            'metrics': {
+                                'churn_rate': churn_rate,
+                                'customer_satisfaction': metrics.get('customer_satisfaction'),
+                                'revenue': metrics.get('revenue_millions')
+                            }
+                        }, 'churn_risk')
+                    
+                    # Create green tile for growth opportunity
+                    growth_rate = metrics.get('growth_rate')
+                    if growth_rate is not None and growth_rate > 0.2:  # 20% growth
+                        self.write_to_tile_analytics({
+                            'name': company['name'],
+                            'category': 'growth_opportunity',
+                            'color': 'green',
+                            'title': 'Strong Growth',
+                            'description': f'Growth rate is {growth_rate:.1%}. Excellent performance.',
+                            'metrics': {
+                                'growth_rate': growth_rate,
+                                'revenue': metrics.get('revenue_millions'),
+                                'customer_satisfaction': metrics.get('customer_satisfaction')
+                            }
+                        }, 'growth_opportunity')
+                    
+                    # Create yellow tile for low engagement
+                    customer_satisfaction = metrics.get('customer_satisfaction')
+                    if customer_satisfaction is not None and customer_satisfaction < 50:  # 50% satisfaction
+                        self.write_to_tile_analytics({
+                            'name': company['name'],
+                            'category': 'engagement_risk',
+                            'color': 'yellow',
+                            'title': 'Low Customer Satisfaction',
+                            'description': f'Customer satisfaction is {customer_satisfaction}%. Needs improvement.',
+                            'metrics': {
+                                'customer_satisfaction': customer_satisfaction,
+                                'churn_rate': metrics.get('churn_rate'),
+                                'revenue': metrics.get('revenue_millions')
+                            }
+                        }, 'engagement_risk')
+                
+                self.logger.info("Successfully created tiles in tile_analytics table")
+                
+            except Exception as tile_error:
+                self.logger.error(f"Error creating tiles: {str(tile_error)}")
+                return {
+                    "success": False,
+                    "message": f"Error creating tiles: {str(tile_error)}"
+                }
+            
+            # Run comprehensive analysis
+            results = self.analyze_data("Analyze the uploaded dataset")
 
             return {
-                "type": "regression",
-                "target": target_col,
-                "features": feature_cols,
-                "r2_score": float(r2_score),
-                "coefficients": coefficients,
-                "predictions": y_pred.tolist(),
-                "metrics": {
-                    "mse": float(mse),
-                    "rmse": float(rmse),
-                    "mae": float(mae)
-                },
-                "feature_importance": feature_importance,
-                "actual_values": y.tolist(),
-                "residuals": (y - y_pred).tolist()
+                "success": "error" not in results,
+                "message": results.get("error", "Analysis completed successfully"),
+                "results": results
             }
+            
         except Exception as e:
-            self.logger.error(f"Error in regression analysis: {str(e)}")
-            raise
-
-    def _perform_correlation_analysis(self, df: pd.DataFrame, query: str) -> Dict:
-        """
-        Perform correlation analysis between variables.
-        """
-        # Get numeric columns
-        numeric_cols = df.select_dtypes(include=[np.number]).columns
-        
-        # Calculate correlation matrix
-        corr_matrix = df[numeric_cols].corr()
-        
-        # Find strong correlations
-        strong_correlations = []
-        for i in range(len(numeric_cols)):
-            for j in range(i+1, len(numeric_cols)):
-                corr = corr_matrix.iloc[i, j]
-                if abs(corr) > 0.5:  # Threshold for strong correlation
-                    strong_correlations.append({
-                        "variable1": numeric_cols[i],
-                        "variable2": numeric_cols[j],
-                        "correlation": corr
-                    })
-
-        return {
-            "type": "correlation",
-            "correlation_matrix": corr_matrix.to_dict(),
-            "strong_correlations": strong_correlations
-        }
-
-    def _perform_time_series_analysis(self, df: pd.DataFrame, query: str) -> Dict:
-        """
-        Perform time series analysis.
-        """
-        # Identify time column
-        time_col = self._identify_time_column(df)
-        if not time_col:
-            raise ValueError("No time column found for time series analysis")
-
-        # Convert to datetime if needed
-        df[time_col] = pd.to_datetime(df[time_col])
-
-        # Sort by time
-        df = df.sort_values(time_col)
-
-        # Calculate basic time series metrics
-        numeric_cols = df.select_dtypes(include=[np.number]).columns
-        time_series_metrics = {}
-
-        for col in numeric_cols:
-            time_series_metrics[col] = {
-                "mean": df[col].mean(),
-                "std": df[col].std(),
-                "trend": self._calculate_trend(df[col]),
-                "seasonality": self._detect_seasonality(df[col])
+            logger.error(f"Error processing CSV file: {str(e)}")
+            return {
+                "success": False,
+                "message": f"Error processing CSV file: {str(e)}"
             }
 
-        return {
-            "type": "time_series",
-            "time_column": time_col,
-            "metrics": time_series_metrics
-        }
+    def _print_tile_analytics_table(self, conn) -> None:
+        """Print the current contents of the tile_analytics table in tabular format"""
+        try:
+            # Query the table and convert to DataFrame
+            df = pd.read_sql("""
+                SELECT 
+                    name,
+                    category,
+                    color,
+                    title,
+                    description,
+                    metrics,
+                    created_at,
+                    updated_at
+                FROM tile_analytics 
+                ORDER BY created_at DESC
+            """, conn)
+            
+            if df.empty:
+                self.logger.info("tile_analytics table is empty")
+                return
+            
+            # Format the DataFrame for display
+            pd.set_option('display.max_columns', None)
+            pd.set_option('display.width', None)
+            pd.set_option('display.max_colwidth', 30)
+            
+            # Convert metrics to string representation
+            df['metrics'] = df['metrics'].apply(lambda x: json.dumps(x, cls=DateTimeEncoder) if x else '{}')
+            
+            # Format timestamps
+            df['created_at'] = pd.to_datetime(df['created_at']).dt.strftime('%Y-%m-%d %H:%M:%S')
+            df['updated_at'] = pd.to_datetime(df['updated_at']).dt.strftime('%Y-%m-%d %H:%M:%S')
+            
+            # Print the table
+            self.logger.info("\nCurrent tile_analytics table contents:")
+            self.logger.info(df.head(n = 100))
+            
+        except Exception as e:
+            self.logger.error(f"Error printing tile_analytics table: {str(e)}")
+
+    def write_to_tile_analytics(self, analysis_results: Dict[str, Any], analysis_type: str) -> bool:
+        """
+        Write analytics results to tile_analytics table based on company characteristics
+        
+        Args:
+            analysis_results: Dictionary containing the analysis results for a single company
+            analysis_type: Type of analysis performed
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            self.logger.info("Starting write_to_tile_analytics")
+            self.logger.info(f"Input analysis_results: {json.dumps(analysis_results, indent=2, cls=DateTimeEncoder)}")
+            self.logger.info(f"Input analysis_type: {analysis_type}")
+            
+            name = analysis_results.get('name')
+            if not name:
+                self.logger.error("No company name provided in analysis_results")
+                return False
+            
+            # Insert into tile_analytics
+            try:
+                with self.engine.connect() as conn:
+                    # First check if table exists
+                    result = conn.execute(text("""
+                        SELECT EXISTS (
+                            SELECT FROM information_schema.tables 
+                            WHERE table_name = 'tile_analytics'
+                        );
+                    """))
+                    table_exists = result.scalar()
+                    
+                    if not table_exists:
+                        self.logger.info("Creating tile_analytics table")
+                        conn.execute(text("""
+                            CREATE TABLE tile_analytics (
+                                id SERIAL PRIMARY KEY,
+                                name VARCHAR(255) NOT NULL,
+                                category VARCHAR(50) NOT NULL,
+                                color VARCHAR(20) NOT NULL,
+                                title VARCHAR(255) NOT NULL,
+                                description TEXT,
+                                metrics JSONB,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            );
+                        """))
+                        conn.commit()
+                        self.logger.info("Successfully created tile_analytics table")
+                    
+                    # Insert the tile data
+                    self.logger.info("Inserting tile data with parameters:")
+                    insert_params = {
+                        'name': name,
+                        'category': analysis_results['category'],
+                        'color': analysis_results['color'],
+                        'title': analysis_results['title'],
+                        'description': analysis_results['description'],
+                        'metrics': json.dumps(analysis_results['metrics'], cls=DateTimeEncoder)
+                    }
+                    self.logger.info(f"Insert parameters: {json.dumps(insert_params, indent=2, cls=DateTimeEncoder)}")
+                    
+                    conn.execute(text("""
+                        INSERT INTO tile_analytics 
+                        (name, category, color, title, description, metrics)
+                        VALUES (:name, :category, :color, :title, :description, :metrics)
+                    """), insert_params)
+                    
+                    # Verify the insertion
+                    result = conn.execute(text("""
+                        SELECT * FROM tile_analytics 
+                        WHERE name = :name 
+                        ORDER BY created_at DESC 
+                        LIMIT 1
+                    """), {'name': name})
+                    
+                    inserted_row = result.fetchone()
+                    if inserted_row:
+                        self.logger.info(f"Successfully inserted tile for {name}")
+                        # Convert row to dict properly and handle datetime serialization
+                        row_dict = {key: value for key, value in inserted_row._mapping.items()}
+                        self.logger.info(f"Inserted row: {json.dumps(row_dict, indent=2, cls=DateTimeEncoder)}")
+                        
+                        # Print current table contents after insertion
+                        self.logger.info("Printing the current table contents after insertion")
+                        self._print_tile_analytics_table(conn)
+                    else:
+                        self.logger.error(f"Failed to verify insertion for {name}")
+                    
+                    conn.commit()
+                    return True
+                    
+            except Exception as insert_error:
+                self.logger.error(f"Error inserting tile for {name}: {str(insert_error)}")
+                self.logger.exception("Full traceback:")
+                return False
+            
+        except Exception as e:
+            self.logger.error(f"Error in write_to_tile_analytics: {str(e)}")
+            self.logger.exception("Full traceback:")
+            return False
+
+    def _determine_tile_characteristics(self, metrics: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Determine the most significant characteristic for a company's tile
+        """
+        try:
+            # Convert metrics to float values
+            churn_rate = self._convert_to_float(metrics.get('churn_rate'))
+            customer_satisfaction = self._convert_to_float(metrics.get('customer_satisfaction'))
+            
+            # Define thresholds
+            HIGH_CHURN_THRESHOLD = 0.1  # 10% churn rate
+            LOW_SATISFACTION_THRESHOLD = 0.05  # 5% satisfaction
+            
+            # Determine the most significant characteristic
+            if churn_rate and churn_rate > HIGH_CHURN_THRESHOLD:
+                return {
+                    'category': 'churn_risk',
+                    'color': 'red',
+                    'title': 'High Churn Risk',
+                    'description': f'Churn rate is {churn_rate:.1%}. Immediate attention required.',
+                    'metrics': {
+                        'churn_rate': churn_rate,
+                        'customer_satisfaction': customer_satisfaction,
+                        'revenue': metrics.get('revenue_millions')
+                    }
+                }
+            elif customer_satisfaction and customer_satisfaction < LOW_SATISFACTION_THRESHOLD:
+                return {
+                            'category': 'satisfaction_risk',
+                            'color': 'orange',
+                            'title': 'Low Customer Satisfaction',
+                            'description': f'Customer satisfaction is {customer_satisfaction:.1%}. Needs improvement.',
+                            'metrics': {
+                                'customer_satisfaction': customer_satisfaction,
+                                'churn_rate': churn_rate,
+                                'revenue': metrics.get('revenue_millions')
+                            }
+                        }
+            return None
+        except Exception as e:
+            self.logger.error(f"Error determining tile characteristics: {str(e)}")
+            return None
+
+    def _convert_to_float(self, value: Any) -> Optional[float]:
+        """Convert a value to float, handling various formats"""
+        if value is None:
+            return None
+            
+        try:
+            if isinstance(value, str):
+                if '%' in value:
+                    return float(value.strip('%')) / 100
+                return float(value)
+            return float(value)
+        except (ValueError, TypeError):
+            return None
 
     def _perform_basic_analysis(self, df: pd.DataFrame, query: str) -> Dict:
         """
-        Perform basic statistical analysis.
+        Perform basic statistical analysis on the dataset.
+        
+        Args:
+            df: DataFrame containing the data
+            query: The original query string
+            
+        Returns:
+            Dictionary containing basic analysis results
         """
-        numeric_cols = df.select_dtypes(include=[np.number]).columns
-        categorical_cols = df.select_dtypes(include=['object']).columns
-
-        analysis = {
-            "type": "basic",
-            "numeric_analysis": {},
-            "categorical_analysis": {}
-        }
-
-        # Analyze numeric columns
-        for col in numeric_cols:
-            analysis["numeric_analysis"][col] = {
-                "mean": df[col].mean(),
-                "median": df[col].median(),
-                "std": df[col].std(),
-                "min": df[col].min(),
-                "max": df[col].max()
+        try:
+            results = {
+                "summary_statistics": {},
+                "column_info": {},
+                "data_quality": {}
             }
-
-        # Analyze categorical columns
-        for col in categorical_cols:
-            analysis["categorical_analysis"][col] = {
-                "unique_values": df[col].nunique(),
-                "most_common": df[col].value_counts().head().to_dict()
+            
+            # Basic summary statistics for numeric columns
+            numeric_cols = df.select_dtypes(include=['number']).columns
+            if not numeric_cols.empty:
+                # Convert numpy/pandas types to Python native types
+                stats = df[numeric_cols].describe()
+                results["summary_statistics"] = {
+                    col: {
+                        stat: float(val) if isinstance(val, (np.number, pd.Series)) else val
+                        for stat, val in stats[col].items()
+                    }
+                    for col in numeric_cols
+                }
+            
+            # Column information
+            for col in df.columns:
+                col_info = {
+                    "dtype": str(df[col].dtype),
+                    "unique_values": int(df[col].nunique()),
+                    "missing_values": int(df[col].isnull().sum())
+                }
+                
+                # Add value counts for categorical columns
+                if df[col].dtype == 'object' or df[col].dtype.name == 'category':
+                    value_counts = df[col].value_counts().head(5)
+                    col_info["value_counts"] = {
+                        str(k): int(v) if isinstance(v, (np.number, pd.Series)) else v
+                        for k, v in value_counts.items()
+                    }
+                
+                results["column_info"][col] = col_info
+            
+            # Data quality metrics
+            results["data_quality"] = {
+                "total_rows": int(len(df)),
+                "total_columns": int(len(df.columns)),
+                "missing_values_percentage": float((df.isnull().sum().sum() / (len(df) * len(df.columns))) * 100),
+                "duplicate_rows": int(df.duplicated().sum())
             }
+            
+            return results
+            
+        except Exception as e:
+            self.logger.error(f"Error in basic analysis: {str(e)}")
+            raise
 
-        return analysis
-
-    def _determine_regression_columns(self, df: pd.DataFrame, query: str) -> Tuple[str, List[str]]:
+    def store_analytics_results(self, results: List[Dict[str, Any]]) -> bool:
         """
-        Determine target and feature columns for regression analysis.
+        Store analytics results in the tile_analytics table in PostgreSQL
         """
-        # This is a simplified version - in practice, you'd want to use NLP
-        # to better understand which columns to use
-        numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-        
-        if len(numeric_cols) < 2:
-            raise ValueError("Not enough numeric columns for regression")
-
-        # Use the last column as target, others as features
-        return numeric_cols[-1], numeric_cols[:-1]
-
-    def _identify_time_column(self, df: pd.DataFrame) -> str:
-        """
-        Identify the time column in the dataframe.
-        """
-        time_related_keywords = ['date', 'time', 'timestamp', 'year', 'month', 'day']
-        
-        for col in df.columns:
-            if any(keyword in col.lower() for keyword in time_related_keywords):
-                return col
-        
-        return None
-
-    def _calculate_trend(self, series: pd.Series) -> float:
-        """
-        Calculate the trend of a time series.
-        """
-        x = np.arange(len(series))
-        slope, _ = np.polyfit(x, series, 1)
-        return slope
-
-    def _detect_seasonality(self, series: pd.Series) -> bool:
-        """
-        Detect if a time series has seasonality.
-        """
-        # Simple seasonality detection using autocorrelation
-        autocorr = pd.Series(series).autocorr()
-        return abs(autocorr) > 0.5
-
-    def _determine_relevant_tables(self, query: str, tables: List[Dict]) -> List[Dict]:
-        """
-        Determine which tables are relevant for the analysis.
-        """
-        # This is a simplified version - in practice, you'd want to use NLP
-        # to better understand which tables to use
-        return tables[:1]  # For now, just use the most recent table 
+        try:
+            with self.engine.connect() as conn:
+                for result in results:
+                    # Insert into tile_analytics table
+                    conn.execute(text("""
+                        INSERT INTO tile_analytics (
+                            name,
+                            title,
+                            description,
+                            color,
+                            created_at,
+                            updated_at
+                        ) VALUES (:name, :title, :description, :color, NOW(), NOW())
+                    """), {
+                        'name': result['name'],
+                        'title': result['title'],
+                        'description': result['description'],
+                        'color': result['color']
+                    })
+                conn.commit()
+            
+            self.logger.info(f"Successfully stored {len(results)} analytics results in tile_analytics table")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Error storing analytics results: {str(e)}")
+            return False 

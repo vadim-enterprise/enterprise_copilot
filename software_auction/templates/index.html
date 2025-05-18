@@ -9,6 +9,7 @@
     
     <!-- CSS -->
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'css/analytics.css' %}">
     
     <!-- JavaScript Dependencies -->
     <script src="https://d3js.org/d3.v7.min.js"></script>
@@ -23,100 +24,54 @@
     <main class="main-content">
         <!-- US Map Container -->
         <div class="map-container">
-            <!-- Tile 1: Churn Analysis -->
-            <div class="map-section">
-                <div class="map-section-header">Churn Analysis</div>
-                <div class="map-section-content">
-                    <div id="churn-map"></div>
-                </div>
+            <!-- Generic Tiles - Will be populated by tiles.js -->
+            <div class="map-section" id="tile-1">
+                <div class="map-section-header"></div>
+                <div class="map-section-content"></div>
             </div>
-
-            <!-- Tile 2: Competitor Analysis -->
-            <div class="map-section">
-                <div class="map-section-header">Competitor Analysis</div>
-                <div class="map-section-content">
-                    <div id="competitor-map"></div>
-                </div>
+            <div class="map-section" id="tile-2">
+                <div class="map-section-header"></div>
+                <div class="map-section-content"></div>
             </div>
-
-            <!-- Tile 3: Market Share -->
-            <div class="map-section">
-                <div class="map-section-header">Market Share</div>
-                <div class="map-section-content">
-                    <div id="market-share-map"></div>
-                </div>
+            <div class="map-section" id="tile-3">
+                <div class="map-section-header"></div>
+                <div class="map-section-content"></div>
             </div>
-
-            <!-- Tile 4: Sales Performance -->
-            <div class="map-section">
-                <div class="map-section-header">Sales Performance</div>
-                <div class="map-section-content">
-                    <div id="sales-map"></div>
-                </div>
+            <div class="map-section" id="tile-4">
+                <div class="map-section-header"></div>
+                <div class="map-section-content"></div>
             </div>
-
-            <!-- Tile 5: Customer Satisfaction -->
-            <div class="map-section">
-                <div class="map-section-header">Customer Satisfaction</div>
-                <div class="map-section-content">
-                    <div id="satisfaction-map"></div>
-                </div>
+            <div class="map-section" id="tile-5">
+                <div class="map-section-header"></div>
+                <div class="map-section-content"></div>
             </div>
-
-            <!-- Tile 6: Growth Opportunities -->
-            <div class="map-section">
-                <div class="map-section-header">Growth Opportunities</div>
-                <div class="map-section-content">
-                    <div id="growth-map"></div>
-                </div>
+            <div class="map-section" id="tile-6">
+                <div class="map-section-header"></div>
+                <div class="map-section-content"></div>
             </div>
-
-            <!-- Tile 7: Revenue Analysis -->
-            <div class="map-section">
-                <div class="map-section-header">Revenue Analysis</div>
-                <div class="map-section-content">
-                    <div id="revenue-map"></div>
-                </div>
+            <div class="map-section" id="tile-7">
+                <div class="map-section-header"></div>
+                <div class="map-section-content"></div>
             </div>
-
-            <!-- Tile 8: Product Performance -->
-            <div class="map-section">
-                <div class="map-section-header">Product Performance</div>
-                <div class="map-section-content">
-                    <div id="product-map"></div>
-                </div>
+            <div class="map-section" id="tile-8">
+                <div class="map-section-header"></div>
+                <div class="map-section-content"></div>
             </div>
-
-            <!-- Tile 9: Customer Demographics -->
-            <div class="map-section">
-                <div class="map-section-header">Customer Demographics</div>
-                <div class="map-section-content">
-                    <div id="demographics-map"></div>
-                </div>
+            <div class="map-section" id="tile-9">
+                <div class="map-section-header"></div>
+                <div class="map-section-content"></div>
             </div>
-
-            <!-- Tile 10: Market Trends -->
-            <div class="map-section">
-                <div class="map-section-header">Market Trends</div>
-                <div class="map-section-content">
-                    <div id="trends-map"></div>
-                </div>
+            <div class="map-section" id="tile-10">
+                <div class="map-section-header"></div>
+                <div class="map-section-content"></div>
             </div>
-
-            <!-- Tile 11: Regional Analysis -->
-            <div class="map-section">
-                <div class="map-section-header">Regional Analysis</div>
-                <div class="map-section-content">
-                    <div id="regional-map"></div>
-                </div>
+            <div class="map-section" id="tile-11">
+                <div class="map-section-header"></div>
+                <div class="map-section-content"></div>
             </div>
-
-            <!-- Tile 12: Competitive Landscape -->
-            <div class="map-section">
-                <div class="map-section-header">Competitive Landscape</div>
-                <div class="map-section-content">
-                    <div id="landscape-map"></div>
-                </div>
+            <div class="map-section" id="tile-12">
+                <div class="map-section-header"></div>
+                <div class="map-section-content"></div>
             </div>
         </div>
 
@@ -167,5 +122,6 @@
     <script src="{% static 'js/speech_manager.js' %}"></script>
     <script src="{% static 'js/file_upload.js' %}"></script>
     <script src="{% static 'js/map_visualization.js' %}"></script>
+    <script src="{% static 'js/analytics_search.js' %}"></script>
 </body>
 </html>

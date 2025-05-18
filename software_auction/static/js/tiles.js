@@ -9,197 +9,141 @@ async function updateTileData() {
             },
             mode: 'cors'
         });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const data = await response.json();
-        console.log('Received tile data:', data);
+        console.log('Fetched tiles:', data);
         
-        // Log all available tile names for debugging
-        console.log("All available tiles in the database:");
-        data.tiles.forEach(tile => {
-            console.log(`- "${tile.tile_name}" (${tile.notification_type})`);
-        });
-        
-        // Find all map sections on the page
-        const allMapSections = document.querySelectorAll('.map-section');
-        console.log(`Found ${allMapSections.length} map sections on the page`);
-        
-        // Print HTML of all map sections for debugging
-        console.log("*** HTML Structure of Map Sections ***");
-        allMapSections.forEach((section, index) => {
-            const header = section.querySelector('.map-section-header');
-            console.log(`Section ${index + 1}: Header = "${header ? header.textContent.trim() : 'No header found'}"`);
-            console.log(`Section HTML: ${section.outerHTML.substring(0, 200)}...`);
-        });
-        
-        // Log all section headers for comparison
-        console.log("All map section headers on the page:");
-        const allHeaders = document.querySelectorAll('.map-section-header');
-        allHeaders.forEach((header, index) => {
-            console.log(`- ${index + 1}: "${header.textContent.trim()}"`);
-        });
-        
-        // Force exact matches with a map for debugging
-        console.log("Creating a direct mapping between headers and tiles");
-        const tileMap = {};
-        
-        // First pass: Collect all header texts
-        allHeaders.forEach(header => {
-            tileMap[header.textContent.trim()] = null;
-        });
-        
-        console.log("Current header map:", Object.keys(tileMap));
-        
-        // Second pass: Try to match tiles to headers
-        data.tiles.forEach(tile => {
-            // Exact match
-            if (tileMap.hasOwnProperty(tile.tile_name)) {
-                tileMap[tile.tile_name] = tile;
-                console.log(`Direct match found for: "${tile.tile_name}"`);
-            } else {
-                console.log(`No direct match for tile: "${tile.tile_name}"`);
-                
-                // Try case-insensitive match
-                let foundMatch = false;
-                Object.keys(tileMap).forEach(headerText => {
-                    if (headerText.toLowerCase() === tile.tile_name.toLowerCase()) {
-                        tileMap[headerText] = tile;
-                        console.log(`Case-insensitive match found: "${headerText}" = "${tile.tile_name}"`);
-                        foundMatch = true;
-                    }
-                });
-                
-                if (!foundMatch) {
-                    console.log(`Warning: No match found for tile "${tile.tile_name}" with any header`);
-                }
-            }
-        });
-        
-        console.log("Final tile mapping:", tileMap);
-        
-        // Manually create a corrective mapping for known header issues
-        const correctionMap = {
-            "Churn Analysis": "Churn Analysis",
-            "Competitor Analysis": "Competitor Analysis",
-            "Market Share": "Market Share",
-            "Sales Performance": "Sales Performance",
-            "Customer Satisfaction": "Customer Satisfaction",
-            "Growth Opportunities": "Growth Opportunities",
-            "Revenue Analysis": "Revenue Analysis",
-            "Product Performance": "Product Performance",
-            "Customer Demographics": "Customer Demographics",
-            "Market Trends": "Market Trends",
-            "Regional Analysis": "Regional Analysis",
-            "Competitive Landscape": "Competitive Landscape"
-        };
-        
-        // Update each tile with its data using the correction map
-        allHeaders.forEach(header => {
-            const headerText = header.textContent.trim();
-            console.log(`Processing header: "${headerText}"`);
+        // Check if data and data.tiles exist
+        if (!data || !data.tiles || !Array.isArray(data.tiles)) {
+            console.error('Invalid data format received:', data);
+            return;
+        }
+
+        // Loop through tiles 1-12 and populate with data
+        for (let i = 1; i <= 12; i++) {
+            const tileId = `tile-${i}`;
+            const tileElement = document.getElementById(tileId);
             
-            // Check if we have a correction mapping
-            const correctedHeader = correctionMap[headerText];
-            if (correctedHeader) {
-                console.log(`Using corrected header: "${correctedHeader}"`);
+            if (!tileElement) {
+                console.error(`Tile element with ID ${tileId} not found`);
+                continue;
+            }
+
+            // Get the corresponding tile data (if available)
+            const tileData = data.tiles[i - 1] || null;
+            
+            if (tileData) {
+                console.log(`Updating tile ${i} with data:`, tileData);
                 
-                // Find the matching tile
-                const matchingTile = data.tiles.find(t => t.tile_name === correctedHeader);
-                if (matchingTile) {
-                    console.log(`Found matching tile for "${headerText}": ${matchingTile.tile_name}`);
-                    updateTileContent(header, matchingTile);
-                } else {
-                    console.warn(`No matching tile found for corrected header: "${correctedHeader}"`);
+                // Set color based on notification_type and content
+                let tileColor = '#1a1a2e'; // Default dark blue
+                let textColor = '#e0e0e0'; // Default light gray
+                let borderColor = '#2a2a3a'; // Default border color
+                let glowColor = 'rgba(0, 0, 0, 0.2)'; // Default glow
+
+                // Determine severity and type of information
+                const isChurnRisk = tileData.issue?.toLowerCase().includes('churn') || 
+                                  tileData.title?.toLowerCase().includes('churn');
+                const isCustomerSatisfaction = tileData.issue?.toLowerCase().includes('satisfaction') || 
+                                            tileData.title?.toLowerCase().includes('satisfaction');
+                const isRevenue = tileData.issue?.toLowerCase().includes('revenue') || 
+                                tileData.title?.toLowerCase().includes('revenue');
+                const isGrowth = tileData.issue?.toLowerCase().includes('growth') || 
+                               tileData.title?.toLowerCase().includes('growth');
+
+                // Set colors based on severity and type
+                if (isChurnRisk) {
+                    tileColor = '#2d1b1b'; // Dark red
+                    borderColor = '#3d2b2b';
+                    glowColor = 'rgba(255, 0, 0, 0.1)';
+                } else if (isCustomerSatisfaction) {
+                    if (tileData.notification_type === 'Warning') {
+                        tileColor = '#2d2b1b'; // Dark orange
+                        borderColor = '#3d3b2b';
+                        glowColor = 'rgba(255, 165, 0, 0.1)';
+                    } else {
+                        tileColor = '#1b2d1b'; // Dark green
+                        borderColor = '#2b3d2b';
+                        glowColor = 'rgba(0, 255, 0, 0.1)';
+                    }
+                } else if (isRevenue) {
+                    if (tileData.notification_type === 'Good News') {
+                        tileColor = '#1b2d2d'; // Dark teal
+                        borderColor = '#2b3d3d';
+                        glowColor = 'rgba(0, 255, 255, 0.1)';
+                    } else {
+                        tileColor = '#2d1b2d'; // Dark purple
+                        borderColor = '#3d2b3d';
+                        glowColor = 'rgba(255, 0, 255, 0.1)';
+                    }
+                } else if (isGrowth) {
+                    tileColor = '#1b1b2d'; // Dark blue
+                    borderColor = '#2b2b3d';
+                    glowColor = 'rgba(0, 0, 255, 0.1)';
+                }
+
+                // Apply the colors and styles
+                tileElement.style.backgroundColor = tileColor;
+                tileElement.style.color = textColor;
+                tileElement.style.border = `1px solid ${borderColor}`;
+                tileElement.style.boxShadow = `0 0 15px ${glowColor}`;
+                tileElement.style.transition = 'all 0.3s ease';
+                
+                // Update header
+                const header = tileElement.querySelector('.map-section-header');
+                if (header) {
+                    header.textContent = tileData.title || tileData.name || 'Untitled';
+                    header.style.borderBottom = `1px solid ${borderColor}`;
+                }
+                
+                // Update content
+                const content = tileElement.querySelector('.map-section-content');
+                if (content) {
+                    content.innerHTML = `
+                        <div class="tile-data" style="background-color: rgba(26, 26, 46, 0.7); border-radius: 5px; margin-top: 10px;">
+                            <div class="tile-info" style="padding: 10px; color: #e0e0e0;">
+                                <p><strong>ID:</strong> ${tileData.id || 'N/A'}</p>
+                                <p><strong>Name:</strong> ${tileData.name || 'N/A'}</p>
+                                <p><strong>Category:</strong> ${tileData.category || 'N/A'}</p>
+                                <p><strong>Title:</strong> ${tileData.title || 'N/A'}</p>
+                                <p><strong>Description:</strong> ${tileData.description || 'N/A'}</p>
+                                <p><strong>Company:</strong> ${tileData.customer || 'N/A'}</p>
+                                <p><strong>Status:</strong> ${tileData.notification_type || 'N/A'}</p>
+                                <p><strong>Issue:</strong> ${tileData.issue || 'N/A'}</p>
+                                <p><strong>Motion:</strong> ${tileData.motion || 'N/A'}</p>
+                                <p><strong>Metrics:</strong> ${tileData.metrics ? JSON.stringify(tileData.metrics, null, 2) : 'N/A'}</p>
+                                <p><strong>Created At:</strong> ${tileData.created_at ? new Date(tileData.created_at).toLocaleString() : 'N/A'}</p>
+                                <p><strong>Updated At:</strong> ${tileData.updated_at ? new Date(tileData.updated_at).toLocaleString() : 'N/A'}</p>
+                            </div>
+                            <div style="font-size: 10px; color: #888; margin-top: 5px; text-align: right;">
+                                Last updated: ${new Date().toLocaleString()}
+                            </div>
+                        </div>
+                    `;
                 }
             } else {
-                console.warn(`No correction mapping for header: "${headerText}"`);
+                console.log(`No data available for tile ${i}`);
+                // Clear the tile content if no data is available
+                const header = tileElement.querySelector('.map-section-header');
+                const content = tileElement.querySelector('.map-section-content');
+                if (header) header.textContent = '';
+                if (content) content.innerHTML = '';
+                tileElement.style.backgroundColor = '#1a1a2e';
+                tileElement.style.border = '1px solid #2a2a3a';
+                tileElement.style.boxShadow = 'none';
             }
-        });
+        }
     } catch (error) {
         console.error('Error fetching tile data:', error);
-    }
-}
-
-// Helper function to update the tile content
-function updateTileContent(header, tile) {
-    const tileContainer = header.closest('.map-section');
-    if (tileContainer) {
-        // Set color based on notification type
-        let tileColor = '#ffffff'; // Default white
-        switch(tile.notification_type) {
-            case 'Alert':
-                tileColor = '#ff5252'; // Red
-                console.log(`Setting Alert color (${tileColor}) for ${tile.tile_name}`);
-                break;
-            case 'Warning':
-                tileColor = '#ffb142'; // Orange
-                console.log(`Setting Warning color (${tileColor}) for ${tile.tile_name}`);
-                break;
-            case 'Info':
-                tileColor = '#54a0ff'; // Blue
-                console.log(`Setting Info color (${tileColor}) for ${tile.tile_name}`);
-                break;
-            case 'Good News':
-                tileColor = '#2ed573'; // Green
-                console.log(`Setting Good News color (${tileColor}) for ${tile.tile_name}`);
-                break;
-            default:
-                console.log(`Unknown notification type: ${tile.notification_type}, using default color for ${tile.tile_name}`);
-        }
-        
-        // Apply the color to the tile container (with !important to override any other styles)
-        console.log(`Applying background color ${tileColor} to tile ${tile.tile_name}`);
-        tileContainer.setAttribute('style', `background-color: ${tileColor} !important`);
-        
-        // Also set text color for better contrast
-        if (tile.notification_type === 'Alert' || tile.notification_type === 'Warning') {
-            tileContainer.style.color = '#ffffff'; // White text for dark backgrounds
-        } else {
-            tileContainer.style.color = '#333333'; // Dark text for light backgrounds
-        }
-        
-        // Update tile content
-        const content = tileContainer.querySelector('.map-section-content');
-        if (content) {
-            // Create or update the data display
-            let dataDisplay = content.querySelector('.tile-data');
-            if (!dataDisplay) {
-                dataDisplay = document.createElement('div');
-                dataDisplay.className = 'tile-data';
-                content.appendChild(dataDisplay);
-            }
-            
-            // Display the tile data with a clear visual style
-            dataDisplay.innerHTML = `
-                <div class="tile-info" style="padding: 10px; background-color: rgba(255, 255, 255, 0.9); border-radius: 5px; margin-top: 10px; color: #333;">
-                    <p><strong>Notification:</strong> ${tile.notification_type || 'N/A'}</p>
-                    <p><strong>Motion:</strong> ${tile.motion || 'N/A'}</p>
-                    <p><strong>Customer:</strong> ${tile.customer || 'N/A'}</p>
-                    <p><strong>Issue:</strong> ${tile.issue || 'N/A'}</p>
-                </div>
-            `;
-            
-            // Add a debug marker to see which tiles were updated
-            const debugMarker = document.createElement('div');
-            debugMarker.style.position = 'absolute';
-            debugMarker.style.top = '5px';
-            debugMarker.style.right = '5px';
-            debugMarker.style.padding = '2px 5px';
-            debugMarker.style.backgroundColor = 'black';
-            debugMarker.style.color = 'white';
-            debugMarker.style.fontSize = '10px';
-            debugMarker.style.borderRadius = '3px';
-            debugMarker.textContent = 'Updated';
-            tileContainer.style.position = 'relative';
-            tileContainer.appendChild(debugMarker);
-        } else {
-            console.error(`Could not find content for tile ${tile.tile_name}`);
-        }
-    } else {
-        console.error(`Could not find container for tile ${tile.tile_name}`);
     }
 }
 
 // Update tiles when the page loads
 document.addEventListener('DOMContentLoaded', updateTileData);
 
-// Update tiles every 30 seconds
-setInterval(updateTileData, 30000); 
+// Update tiles every 5 seconds
+setInterval(updateTileData, 5000);

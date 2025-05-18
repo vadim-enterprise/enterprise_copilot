@@ -190,6 +190,28 @@ ssl = off
             ], check=True, capture_output=True)
             logger.info("Configured database transaction settings")
 
+            # Create tile_analytics table
+            subprocess.run([
+                'psql',
+                '-h', 'localhost',
+                '-p', '5540',
+                'pred_genai',
+                '-c', """
+                CREATE TABLE IF NOT EXISTS tile_analytics (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(255) NOT NULL,
+                    category VARCHAR(50) NOT NULL,
+                    color VARCHAR(20) NOT NULL,
+                    title VARCHAR(255) NOT NULL,
+                    description TEXT,
+                    metrics JSONB,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+                """
+            ], check=True, capture_output=True)
+            logger.info("Created tile_analytics table")
+
             # Verify database exists and is accessible
             result = subprocess.run([
                 'psql',
@@ -214,209 +236,6 @@ ssl = off
         logger.error(f"Error starting PostgreSQL: {e}")
         return False
 
-def ensure_tile_postgres_running():
-    """Ensure PostgreSQL is running on port 5541 for tile analytics"""
-    # Check if port is in use and kill any process using it
-    if is_port_in_use(5541):
-        logger.info("Port 5541 is already in use. Stopping existing PostgreSQL instance...")
-        kill_process_on_port(5541)
-        # Wait for the port to be released
-        max_retries = 10
-        for i in range(max_retries):
-            if not is_port_in_use(5541):
-                logger.info("Port 5541 is now available.")
-                break
-            logger.info(f"Waiting for port 5541 to be released... ({i+1}/{max_retries})")
-            time.sleep(1)
-        else:
-            logger.error("Could not free up port 5541. Please check for running processes manually.")
-            return False
-
-    logger.info("Starting PostgreSQL on port 5541...")
-    try:
-        # Create data directory if it doesn't exist
-        data_dir = BASE_DIR / 'postgres_tile_data'
-        if data_dir.exists():
-            logger.info("Removing existing PostgreSQL data directory...")
-            import shutil
-            shutil.rmtree(str(data_dir), ignore_errors=True)
-        data_dir.mkdir(exist_ok=True)
-
-        # Initialize database
-        logger.info("Initializing PostgreSQL database for tiles...")
-        subprocess.run([
-            'initdb',
-            '-D', str(data_dir),
-            '--auth=trust'
-        ], check=True)
-
-        # Configure PostgreSQL to allow local connections
-        pg_hba_conf = data_dir / 'pg_hba.conf'
-        with open(pg_hba_conf, 'w') as f:
-            f.write("""# TYPE  DATABASE        USER            ADDRESS                 METHOD
-local   all             all                                     trust
-host    all             all             127.0.0.1/32            trust
-host    all             all             ::1/128                 trust
-""")
-
-        # Configure PostgreSQL to listen on localhost
-        postgresql_conf = data_dir / 'postgresql.conf'
-        with open(postgresql_conf, 'w') as f:
-            f.write("""# Basic PostgreSQL configuration
-listen_addresses = 'localhost'
-port = 5541
-max_connections = 100
-shared_buffers = 128MB
-dynamic_shared_memory_type = posix
-max_wal_size = 1GB
-min_wal_size = 80MB
-""")
-
-        # Start PostgreSQL
-        postgres_process = subprocess.Popen([
-            'postgres',
-            '-D', str(data_dir),
-            '-p', '5541',
-            '-c', 'listen_addresses=localhost'
-        ])
-
-        # Wait for PostgreSQL to start
-        max_retries = 30
-        for i in range(max_retries):
-            if is_port_in_use(5541):
-                logger.info("PostgreSQL started successfully on port 5541")
-                break
-            logger.info(f"Waiting for PostgreSQL to start... ({i+1}/{max_retries})")
-            time.sleep(1)
-        else:
-            logger.error("Failed to start PostgreSQL on port 5541")
-            return False
-
-        # Wait for PostgreSQL to be ready for connections
-        max_retries = 30
-        for i in range(max_retries):
-            try:
-                result = subprocess.run([
-                    'psql',
-                    '-h', 'localhost',
-                    '-p', '5541',
-                    'postgres',
-                    '-c', 'SELECT 1;'
-                ], check=True, capture_output=True, text=True)
-                logger.info("PostgreSQL is ready for connections")
-                break
-            except subprocess.CalledProcessError:
-                if i == max_retries - 1:
-                    logger.error("PostgreSQL failed to become ready for connections")
-                    return False
-                time.sleep(1)
-
-        # Create database and tables
-        try:
-            logger.info("Creating database tile_analytics...")
-            
-            # Create the database
-            subprocess.run([
-                'psql',
-                '-h', 'localhost',
-                '-p', '5541',
-                'postgres',
-                '-c', 'CREATE DATABASE tile_analytics;'
-            ], check=True, capture_output=True)
-            logger.info("Created database tile_analytics")
-
-            # Grant ownership
-            subprocess.run([
-                'psql',
-                '-h', 'localhost',
-                '-p', '5541',
-                'postgres',
-                '-c', 'ALTER DATABASE tile_analytics OWNER TO glinskiyvadim;'
-            ], check=True, capture_output=True)
-            logger.info("Changed database ownership to glinskiyvadim")
-
-            # Create the tiles table
-            subprocess.run([
-                'psql',
-                '-h', 'localhost',
-                '-p', '5541',
-                'tile_analytics',
-                '-c', """
-                CREATE TABLE IF NOT EXISTS tile_data (
-                    id SERIAL PRIMARY KEY,
-                    tile_name VARCHAR(100) NOT NULL,
-                    notification_type TEXT,
-                    motion TEXT,
-                    customer TEXT,
-                    issue TEXT,
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-                );
-                
-                -- Create trigger to update updated_at timestamp
-                CREATE OR REPLACE FUNCTION update_updated_at_column()
-                RETURNS TRIGGER AS $$
-                BEGIN
-                    NEW.updated_at = CURRENT_TIMESTAMP;
-                    RETURN NEW;
-                END;
-                $$ language 'plpgsql';
-                
-                DROP TRIGGER IF EXISTS update_tile_data_updated_at ON tile_data;
-                CREATE TRIGGER update_tile_data_updated_at
-                    BEFORE UPDATE ON tile_data
-                    FOR EACH ROW
-                    EXECUTE FUNCTION update_updated_at_column();
-                
-                -- Clear existing data
-                TRUNCATE TABLE tile_data RESTART IDENTITY;
-                
-                -- Insert initial data for 12 tiles
-                INSERT INTO tile_data (tile_name) VALUES
-                    ('Churn Analysis'),
-                    ('Competitor Analysis'),
-                    ('Market Share'),
-                    ('Sales Performance'),
-                    ('Customer Satisfaction'),
-                    ('Growth Opportunities'),
-                    ('Revenue Analysis'),
-                    ('Product Performance'),
-                    ('Customer Demographics'),
-                    ('Market Trends'),
-                    ('Regional Analysis'),
-                    ('Competitive Landscape');
-                """
-            ], check=True, capture_output=True)
-            logger.info("Created tile_data table and inserted initial data")
-
-            # Grant privileges
-            subprocess.run([
-                'psql',
-                '-h', 'localhost',
-                '-p', '5541',
-                'tile_analytics',
-                '-c', 'GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO glinskiyvadim;'
-            ], check=True, capture_output=True)
-            
-            subprocess.run([
-                'psql',
-                '-h', 'localhost',
-                '-p', '5541',
-                'tile_analytics',
-                '-c', 'GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO glinskiyvadim;'
-            ], check=True, capture_output=True)
-            logger.info("Granted privileges to glinskiyvadim")
-
-            return True
-
-        except subprocess.CalledProcessError as e:
-            logger.error(f"Error creating/verifying database: {e.stderr if hasattr(e, 'stderr') else str(e)}")
-            return False
-
-    except Exception as e:
-        logger.error(f"Error starting PostgreSQL: {e}")
-        return False
-
 def kill_process_on_port(port):
     """Kill any process running on the specified port"""
     logger.info(f"Attempting to kill process on port {port}...")
@@ -435,7 +254,7 @@ def kill_process_on_port(port):
                         logger.info(f"Successfully terminated process {conn.pid}")
                     except psutil.TimeoutExpired:
                         logger.info(f"Process {conn.pid} did not terminate, sending SIGKILL")
-                        process.kill()
+                    process.kill()
                     time.sleep(1)  # Wait for process to terminate
                     return
                 except (psutil.NoSuchProcess, psutil.AccessDenied) as e:
@@ -443,45 +262,45 @@ def kill_process_on_port(port):
     except (psutil.AccessDenied, psutil.Error) as e:
         logger.warning(f"Could not check port {port} with psutil: {e}")
     
-    # Fallback to platform-specific commands
-    try:
-        if sys.platform.startswith('win'):
-            # Windows-specific command
-            output = subprocess.check_output(f'netstat -ano | findstr :{port}', shell=True).decode().strip()
+        # Fallback to platform-specific commands
+        try:
+            if sys.platform.startswith('win'):
+                # Windows-specific command
+                output = subprocess.check_output(f'netstat -ano | findstr :{port}', shell=True).decode().strip()
             if output:
                 pid = output.split()[-1]
                 subprocess.run(['taskkill', '/F', '/PID', pid], check=True)
                 logger.info(f"Killed process with PID {pid} on port {port} using taskkill")
-        elif sys.platform.startswith('darwin'):
+            elif sys.platform.startswith('darwin'):
             # macOS-specific commands for PostgreSQL
             # First check if this is a PostgreSQL process
-            try:
-                output = subprocess.check_output(f"lsof -i :{port} | grep LISTEN", shell=True).decode().strip()
-                if 'postgres' in output.lower():
-                    logger.info(f"Found PostgreSQL process on port {port}")
-                    # Try finding the PID of the PostgreSQL process
-                    pid_output = subprocess.check_output(f"ps aux | grep postgres | grep {port}", shell=True).decode().strip()
-                    pid_lines = pid_output.split('\n')
-                    for line in pid_lines:
-                        if 'grep' not in line and str(port) in line:
-                            pid = line.split()[1]
-                            logger.info(f"Sending SIGTERM to PostgreSQL process with PID {pid}")
-                            subprocess.run(f"kill {pid}", shell=True, check=False)
-                            time.sleep(2)
-                            if not is_port_in_use(port):
-                                logger.info(f"Successfully terminated PostgreSQL process on port {port}")
-                                return
-                            
-                            logger.info(f"PostgreSQL process did not terminate, sending SIGKILL")
-                            subprocess.run(f"kill -9 {pid}", shell=True, check=False)
-                            time.sleep(1)
-                            if not is_port_in_use(port):
-                                logger.info(f"Successfully killed PostgreSQL process on port {port}")
-                                return
-            except subprocess.CalledProcessError:
-                logger.info("No postgres process found via lsof")
-            
-            # Generic approach if the above didn't work
+                try:
+                    output = subprocess.check_output(f"lsof -i :{port} | grep LISTEN", shell=True).decode().strip()
+                    if 'postgres' in output.lower():
+                        logger.info(f"Found PostgreSQL process on port {port}")
+                        # Try finding the PID of the PostgreSQL process
+                        pid_output = subprocess.check_output(f"ps aux | grep postgres | grep {port}", shell=True).decode().strip()
+                        pid_lines = pid_output.split('\n')
+                        for line in pid_lines:
+                            if 'grep' not in line and str(port) in line:
+                                pid = line.split()[1]
+                                logger.info(f"Sending SIGTERM to PostgreSQL process with PID {pid}")
+                                subprocess.run(f"kill {pid}", shell=True, check=False)
+                                time.sleep(2)
+                                if not is_port_in_use(port):
+                                    logger.info(f"Successfully terminated PostgreSQL process on port {port}")
+                                    return
+                                
+                                logger.info(f"PostgreSQL process did not terminate, sending SIGKILL")
+                                subprocess.run(f"kill -9 {pid}", shell=True, check=False)
+                                time.sleep(1)
+                                if not is_port_in_use(port):
+                                    logger.info(f"Successfully killed PostgreSQL process on port {port}")
+                                    return
+                except subprocess.CalledProcessError:
+                    logger.info("No postgres process found via lsof")
+                
+                # Generic approach if the above didn't work
             try:
                 subprocess.run(f"lsof -ti :{port} | xargs kill", shell=True, check=False)
                 time.sleep(2)
@@ -497,24 +316,24 @@ def kill_process_on_port(port):
                     return
             except Exception as e:
                 logger.warning(f"Error with lsof kill command: {e}")
-        else:
-            # Linux and other Unix-like systems
-            try:
-                subprocess.run(f"fuser -k {port}/tcp", shell=True, check=False)
-                time.sleep(1)
-                if not is_port_in_use(port):
-                    logger.info(f"Successfully killed process on port {port} using fuser")
-                    return
-            except Exception:
-                # Try lsof as alternative
+            else:
+                # Linux and other Unix-like systems
                 try:
-                    subprocess.run(f"lsof -ti :{port} | xargs kill -9", shell=True, check=False)
+                    subprocess.run(f"fuser -k {port}/tcp", shell=True, check=False)
                     time.sleep(1)
-                    logger.info(f"Sent SIGKILL to process on port {port} using lsof")
-                except Exception as e:
-                    logger.warning(f"Error with lsof kill command: {e}")
-    except Exception as e:
-        logger.error(f"Error killing process on port {port}: {e}")
+                    if not is_port_in_use(port):
+                        logger.info(f"Successfully killed process on port {port} using fuser")
+                        return
+                except Exception:
+                    # Try lsof as alternative
+                    try:
+                        subprocess.run(f"lsof -ti :{port} | xargs kill -9", shell=True, check=False)
+                        time.sleep(1)
+                        logger.info(f"Sent SIGKILL to process on port {port} using lsof")
+                    except Exception as e:
+                        logger.warning(f"Error with lsof kill command: {e}")
+        except Exception as e:
+            logger.error(f"Error killing process on port {port}: {e}")
     
     # Verify if port is still in use
     if is_port_in_use(port):
@@ -606,32 +425,6 @@ def apply_migrations():
         logger.error(f"Error applying migrations: {e}")
         return False
 
-def load_sample_tile_data():
-    """Run the tile CSV uploader to load sample data"""
-    logger.info("Loading sample tile data...")
-    try:
-        script_path = BASE_DIR / 'tile_csv_uploader.py'
-        if not script_path.exists():
-            logger.error(f"Tile CSV uploader script not found at {script_path}")
-            return False
-            
-        result = subprocess.run(
-            [sys.executable, str(script_path)],
-            cwd=str(BASE_DIR),
-            capture_output=True,
-            text=True
-        )
-        
-        if result.returncode != 0:
-            logger.error(f"Failed to load sample tile data: {result.stderr}")
-            return False
-            
-        logger.info("Sample tile data loaded successfully")
-        return True
-    except Exception as e:
-        logger.error(f"Error loading sample tile data: {e}")
-        return False
-
 def main():
     """Main function to start both servers"""
     # Store the current working directory
@@ -652,13 +445,9 @@ def main():
             sys.exit(1)
         
         logger.info("Starting tile analytics PostgreSQL server...")
-        if not ensure_tile_postgres_running():
-            logger.error("Failed to start tile PostgreSQL")
-            sys.exit(1)
-            
-        # Load sample tile data
-        if not load_sample_tile_data():
-            logger.warning("Failed to load sample tile data, the tiles may not display proper information")
+        # if not ensure_tile_postgres_running():
+        #     logger.error("Failed to start tile PostgreSQL")
+        #     sys.exit(1)
             
         # Kill any existing processes on both ports
         logger.info("Checking for existing processes on web ports...")
@@ -698,7 +487,7 @@ def main():
         if not setup_pgvector():
             logger.error("pgvector setup failed")
             sys.exit(1)
-        
+            
         logger.info("Collecting static files...")    
         if not collect_static():
             logger.error("Static file collection failed")

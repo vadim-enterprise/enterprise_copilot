@@ -143,9 +143,17 @@ class WebSearch {
         this.searchInput = document.getElementById('webSearchInput');
         this.searchButton = document.getElementById('webSearchButton');
         this.resultsWindow = document.getElementById('searchResultsWindow');
-        this.resultsContent = this.resultsWindow?.querySelector('.search-results-content');
+        this.resultsContent = document.querySelector('.search-results-content');
         this.closeButton = this.resultsWindow?.querySelector('.search-results-close');
-        this.mapContainer = document.getElementById('mapContainer');
+        this.mapContainer = document.querySelector('.map-container');
+        
+        if (!this.mapContainer) {
+            console.warn('[WebSearch] Map container not found - maps will not be displayed');
+        }
+        
+        if (!this.resultsContent) {
+            console.warn('[WebSearch] Results content container not found - results will not be displayed');
+        }
         
         // Initialize if elements exist
         if (this.searchInput && this.searchButton && this.resultsWindow && this.resultsContent) {
@@ -180,7 +188,7 @@ class WebSearch {
 
     initializeMap() {
         if (!this.mapContainer) {
-            console.error('[WebSearch] Map container not found');
+            console.warn('[WebSearch] Map container not found - skipping map initialization');
             return;
         }
 
@@ -189,7 +197,7 @@ class WebSearch {
         const height = 400;
 
         // Create SVG container
-        const svg = d3.select('#map')
+        const svg = d3.select(this.mapContainer)
             .append('svg')
             .attr('width', width)
             .attr('height', height);
@@ -284,22 +292,52 @@ class WebSearch {
 
     async performSearch() {
         const query = this.searchInput.value.trim();
-        if (!query) return;
-
+        
+        if (!query) {
+            return;
+        }
+        
+        // Show loading state
+        this.resultsWindow.classList.add('active');
+        this.resultsContent.innerHTML = '<div class="loading-spinner"></div>';
+        
         try {
-            // Show loading state
-            this.resultsContent.innerHTML = '<div class="result-item"><div class="loading-spinner"></div></div>';
-            this.resultsWindow.classList.add('active');
-
-            // Call chat API
-            const response = await this._callChatAPI(query);
-            console.log('[WebSearch] Raw API response:', response);
+            // First check if this is an analytics-related query
+            const analyticsKeywords = [
+                'analyze', 'analysis', 'analytics', 'statistics', 'stats',
+                'anomaly', 'anomalies', 'clustering', 'cluster', 'forecast',
+                'time series', 'trend', 'prediction', 'predict', 'model'
+            ];
             
-            // Display results
-            this.displayResults(response);
+            const isAnalyticsQuery = analyticsKeywords.some(keyword => query.toLowerCase().includes(keyword));
+            
+            if (isAnalyticsQuery) {
+                // Try to handle as an analytics query
+                const analyticsResponse = await fetch('/websearch', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `query=${encodeURIComponent(query)}`
+                });
+                
+                if (analyticsResponse.ok) {
+                    const analyticsData = await analyticsResponse.json();
+                    
+                    if (analyticsData.type === 'analytics' && analyticsData.results.is_analytics_query) {
+                        // This was successfully processed as an analytics query
+                        this.displayAnalyticsResults(analyticsData.results);
+                        return;
+                    }
+                }
+            }
+            
+            // If not an analytics query or analytics processing failed, proceed with regular search
+            const data = await this._callChatAPI(query);
+            this.displayResults(data);
         } catch (error) {
-            console.error('[WebSearch] Search error:', error);
-            this.displayError(error.message || 'An error occurred during the search');
+            console.error('Search error:', error);
+            this.displayError('Error performing search. Please try again.');
         }
     }
 
@@ -437,6 +475,203 @@ class WebSearch {
         
         // Format each sentence as a bullet point
         return sentences.map(sentence => `<p>${sentence.trim()}</p>`).join('');
+    }
+
+    displayAnalyticsResults(results) {
+        // Clear previous results
+        this.resultsContent.innerHTML = '';
+        
+        // Create header
+        const header = document.createElement('h3');
+        header.textContent = 'Analytics Results';
+        this.resultsContent.appendChild(header);
+        
+        // Check if the analytics processing was successful
+        if (!results.success) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.textContent = `Analytics Error: ${results.message}`;
+            this.resultsContent.appendChild(errorDiv);
+            return;
+        }
+        
+        // Display analysis type if available
+        if (results.analysis_type) {
+            const analysisType = document.createElement('div');
+            analysisType.className = 'analysis-type';
+            analysisType.innerHTML = `<strong>Analysis Type:</strong> ${this.formatAnalysisType(results.analysis_type)}`;
+            this.resultsContent.appendChild(analysisType);
+        }
+        
+        // Display results
+        if (results.results) {
+            this.displayAnalyticsResultDetails(results.results);
+        }
+    }
+
+    displayAnalyticsResultDetails(results) {
+        // Check if we have anomaly detection results
+        if (results.anomaly_detection) {
+            this.displayAnomalyDetectionResults(results.anomaly_detection);
+        }
+        
+        // Check if we have clustering results
+        if (results.clustering) {
+            this.displayClusteringResults(results.clustering);
+        }
+        
+        // Check if we have time series results
+        const timeSeriesKeys = Object.keys(results).filter(key => key.startsWith('time_series_'));
+        if (timeSeriesKeys.length > 0) {
+            timeSeriesKeys.forEach(key => {
+                this.displayTimeSeriesResults(results[key], key.replace('time_series_', ''));
+            });
+        }
+    }
+
+    displayAnomalyDetectionResults(results) {
+        const section = document.createElement('div');
+        section.className = 'analysis-section anomaly-section';
+        
+        // Create header
+        const header = document.createElement('h4');
+        header.textContent = 'Anomaly Detection Results';
+        section.appendChild(header);
+        
+        // Display anomaly count
+        const countDiv = document.createElement('div');
+        countDiv.className = 'anomaly-count';
+        countDiv.textContent = `Found ${results.anomaly_count} anomalies in the data`;
+        section.appendChild(countDiv);
+        
+        // Display plot if available
+        if (results.plot) {
+            this.displayPlot(section, results.plot);
+        }
+        
+        this.resultsContent.appendChild(section);
+    }
+
+    displayClusteringResults(results) {
+        const section = document.createElement('div');
+        section.className = 'analysis-section clustering-section';
+        
+        // Create header
+        const header = document.createElement('h4');
+        header.textContent = 'Clustering Results';
+        section.appendChild(header);
+        
+        // Display cluster count
+        const countDiv = document.createElement('div');
+        countDiv.className = 'cluster-count';
+        countDiv.textContent = `Data segmented into ${results.n_clusters} distinct clusters`;
+        section.appendChild(countDiv);
+        
+        // Display plot if available
+        if (results.plot) {
+            this.displayPlot(section, results.plot);
+        }
+        
+        this.resultsContent.appendChild(section);
+    }
+
+    displayTimeSeriesResults(results, columnName) {
+        const section = document.createElement('div');
+        section.className = 'analysis-section time-series-section';
+        
+        // Create header
+        const header = document.createElement('h4');
+        header.textContent = `Time Series Analysis: ${columnName}`;
+        section.appendChild(header);
+        
+        // Display trend information
+        if (results.trend) {
+            const trendDiv = document.createElement('div');
+            trendDiv.className = 'trend-info';
+            trendDiv.innerHTML = `<strong>Trend:</strong> ${results.trend}`;
+            section.appendChild(trendDiv);
+        }
+        
+        // Display statistics if available
+        if (results.stats) {
+            const statsDiv = document.createElement('div');
+            statsDiv.className = 'stats-info';
+            
+            const statsList = document.createElement('ul');
+            for (const [key, value] of Object.entries(results.stats)) {
+                if (typeof value === 'number') {
+                    const item = document.createElement('li');
+                    item.textContent = `${this.formatStatName(key)}: ${value.toFixed(2)}`;
+                    statsList.appendChild(item);
+                }
+            }
+            
+            statsDiv.appendChild(statsList);
+            section.appendChild(statsDiv);
+        }
+        
+        // Display forecast if available
+        if (results.forecast && results.forecast.length > 0) {
+            const forecastDiv = document.createElement('div');
+            forecastDiv.className = 'forecast-info';
+            forecastDiv.innerHTML = `<strong>Forecast (next ${results.forecast.length} periods):</strong> ${results.forecast.map(v => parseFloat(v).toFixed(2)).join(', ')}`;
+            section.appendChild(forecastDiv);
+        }
+        
+        // Display plot if available
+        if (results.plot) {
+            this.displayPlot(section, results.plot);
+        }
+        
+        this.resultsContent.appendChild(section);
+    }
+
+    displayPlot(container, plotBase64) {
+        const plotDiv = document.createElement('div');
+        plotDiv.className = 'plot-container';
+        
+        const img = document.createElement('img');
+        img.src = `data:image/png;base64,${plotBase64}`;
+        img.className = 'analytics-plot';
+        img.alt = 'Analytics Plot';
+        img.style.maxWidth = '100%';
+        
+        plotDiv.appendChild(img);
+        container.appendChild(plotDiv);
+    }
+
+    formatAnalysisType(type) {
+        switch (type) {
+            case 'anomaly':
+                return 'Anomaly Detection';
+            case 'clustering':
+                return 'Clustering Analysis';
+            case 'time_series':
+                return 'Time Series Analysis';
+            default:
+                return type.charAt(0).toUpperCase() + type.slice(1);
+        }
+    }
+
+    formatStatName(name) {
+        switch (name) {
+            case 'mean':
+                return 'Mean';
+            case 'std':
+                return 'Standard Deviation';
+            case 'min':
+                return 'Minimum';
+            case 'max':
+                return 'Maximum';
+            case 'current':
+                return 'Current Value';
+            case 'previous':
+                return 'Previous Value';
+            case 'percent_change':
+                return 'Percent Change';
+            default:
+                return name.charAt(0).toUpperCase() + name.slice(1).replace(/_/g, ' ');
+        }
     }
 }
 

@@ -1,10 +1,8 @@
 import os
 import logging
-from pathlib import Path
 import tempfile
 from openai import OpenAI
 from fastapi import HTTPException, UploadFile, File
-import aiofiles
 
 logger = logging.getLogger(__name__)
 

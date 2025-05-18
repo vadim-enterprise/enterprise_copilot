@@ -9,109 +9,77 @@ async function updateTileData() {
             },
             mode: 'cors'
         });
-        const data = await response.json();
-        console.log('Received tile data:', data);
         
-        // Log all available tile names for debugging
-        console.log("All available tiles in the database:");
+       
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('fetched tiles:', data); 
+        console.log('Raw API response:', data);
+        
+        // Check if data and data.tiles exist
+        if (!data || !data.tiles || !Array.isArray(data.tiles)) {
+            console.error('Invalid data format received:', data);
+            return;
+        }
+        
+        // Log the first tile to see its structure
+        if (data.tiles.length > 0) {
+            console.log('First tile structure:', JSON.stringify(data.tiles[0], null, 2));
+            console.log('First tile keys:', Object.keys(data.tiles[0]));
+        }
+
+        // Log all unique keys across all tiles
+        const allKeys = new Set();
         data.tiles.forEach(tile => {
-            console.log(`- "${tile.tile_name}" (${tile.notification_type})`);
+            Object.keys(tile).forEach(key => allKeys.add(key));
+        });
+        console.log('All unique keys in tiles:', Array.from(allKeys));
+
+        // Log all unique values for each key
+        const uniqueValues = {};
+        allKeys.forEach(key => {
+            uniqueValues[key] = new Set();
+            data.tiles.forEach(tile => {
+                if (tile[key] !== undefined) {
+                    uniqueValues[key].add(tile[key]);
+                }
+            });
+        });
+        console.log('Unique values for each key:', Object.fromEntries(
+            Object.entries(uniqueValues).map(([key, values]) => [key, Array.from(values)])
+        ));
+        
+        // Log detailed information about each tile
+        console.log("Detailed tile information:");
+        data.tiles.forEach((tile, index) => {
+            console.log(`Tile ${index + 1}:`, JSON.stringify({
+                name: tile.name,
+                category: tile.category,
+                title: tile.title,
+                description: tile.description,
+                color: tile.color,
+                metrics: tile.metrics,
+                notification_type: tile.notification_type,
+                motion: tile.motion,
+                customer: tile.customer,
+                issue: tile.issue
+            }, null, 2));
         });
         
         // Find all map sections on the page
         const allMapSections = document.querySelectorAll('.map-section');
         console.log(`Found ${allMapSections.length} map sections on the page`);
         
-        // Print HTML of all map sections for debugging
-        console.log("*** HTML Structure of Map Sections ***");
-        allMapSections.forEach((section, index) => {
+        // Update each section with its corresponding tile data
+        allMapSections.forEach(section => {
             const header = section.querySelector('.map-section-header');
-            console.log(`Section ${index + 1}: Header = "${header ? header.textContent.trim() : 'No header found'}"`);
-            console.log(`Section HTML: ${section.outerHTML.substring(0, 200)}...`);
-        });
-        
-        // Log all section headers for comparison
-        console.log("All map section headers on the page:");
-        const allHeaders = document.querySelectorAll('.map-section-header');
-        allHeaders.forEach((header, index) => {
-            console.log(`- ${index + 1}: "${header.textContent.trim()}"`);
-        });
-        
-        // Force exact matches with a map for debugging
-        console.log("Creating a direct mapping between headers and tiles");
-        const tileMap = {};
-        
-        // First pass: Collect all header texts
-        allHeaders.forEach(header => {
-            tileMap[header.textContent.trim()] = null;
-        });
-        
-        console.log("Current header map:", Object.keys(tileMap));
-        
-        // Second pass: Try to match tiles to headers
-        data.tiles.forEach(tile => {
-            // Exact match
-            if (tileMap.hasOwnProperty(tile.tile_name)) {
-                tileMap[tile.tile_name] = tile;
-                console.log(`Direct match found for: "${tile.tile_name}"`);
-            } else {
-                console.log(`No direct match for tile: "${tile.tile_name}"`);
-                
-                // Try case-insensitive match
-                let foundMatch = false;
-                Object.keys(tileMap).forEach(headerText => {
-                    if (headerText.toLowerCase() === tile.tile_name.toLowerCase()) {
-                        tileMap[headerText] = tile;
-                        console.log(`Case-insensitive match found: "${headerText}" = "${tile.tile_name}"`);
-                        foundMatch = true;
-                    }
-                });
-                
-                if (!foundMatch) {
-                    console.log(`Warning: No match found for tile "${tile.tile_name}" with any header`);
-                }
-            }
-        });
-        
-        console.log("Final tile mapping:", tileMap);
-        
-        // Manually create a corrective mapping for known header issues
-        const correctionMap = {
-            "Churn Analysis": "Churn Analysis",
-            "Competitor Analysis": "Competitor Analysis",
-            "Market Share": "Market Share",
-            "Sales Performance": "Sales Performance",
-            "Customer Satisfaction": "Customer Satisfaction",
-            "Growth Opportunities": "Growth Opportunities",
-            "Revenue Analysis": "Revenue Analysis",
-            "Product Performance": "Product Performance",
-            "Customer Demographics": "Customer Demographics",
-            "Market Trends": "Market Trends",
-            "Regional Analysis": "Regional Analysis",
-            "Competitive Landscape": "Competitive Landscape"
-        };
-        
-        // Update each tile with its data using the correction map
-        allHeaders.forEach(header => {
-            const headerText = header.textContent.trim();
-            console.log(`Processing header: "${headerText}"`);
+            if (!header) return;
             
-            // Check if we have a correction mapping
-            const correctedHeader = correctionMap[headerText];
-            if (correctedHeader) {
-                console.log(`Using corrected header: "${correctedHeader}"`);
-                
-                // Find the matching tile
-                const matchingTile = data.tiles.find(t => t.tile_name === correctedHeader);
-                if (matchingTile) {
-                    console.log(`Found matching tile for "${headerText}": ${matchingTile.tile_name}`);
-                    updateTileContent(header, matchingTile);
-                } else {
-                    console.warn(`No matching tile found for corrected header: "${correctedHeader}"`);
-                }
-            } else {
-                console.warn(`No correction mapping for header: "${headerText}"`);
-            }
+            const headerText = header.textContent.trim();
+            console.log(`Processing section: "${headerText}"`);
         });
     } catch (error) {
         console.error('Error fetching tile data:', error);
@@ -120,86 +88,84 @@ async function updateTileData() {
 
 // Helper function to update the tile content
 function updateTileContent(header, tile) {
+    if (!header) {
+        console.error('No header element provided');
+        return;
+    }
+    
     const tileContainer = header.closest('.map-section');
-    if (tileContainer) {
-        // Set color based on notification type
-        let tileColor = '#ffffff'; // Default white
-        switch(tile.notification_type) {
-            case 'Alert':
-                tileColor = '#ff5252'; // Red
-                console.log(`Setting Alert color (${tileColor}) for ${tile.tile_name}`);
-                break;
-            case 'Warning':
-                tileColor = '#ffb142'; // Orange
-                console.log(`Setting Warning color (${tileColor}) for ${tile.tile_name}`);
-                break;
-            case 'Info':
-                tileColor = '#54a0ff'; // Blue
-                console.log(`Setting Info color (${tileColor}) for ${tile.tile_name}`);
-                break;
-            case 'Good News':
-                tileColor = '#2ed573'; // Green
-                console.log(`Setting Good News color (${tileColor}) for ${tile.tile_name}`);
-                break;
-            default:
-                console.log(`Unknown notification type: ${tile.notification_type}, using default color for ${tile.tile_name}`);
+    if (!tileContainer) {
+        console.error('No tile container found');
+        return;
+    }
+    
+    console.log(`Updating tile content for company:`, tile);
+    
+    // Set color based on notification_type
+    let tileColor = '#ffffff'; // Default white
+    switch(tile.notification_type) {
+        case 'Alert':
+            tileColor = '#ff5252'; // Red
+            break;
+        case 'Warning':
+            tileColor = '#ffb142'; // Orange
+            break;
+        case 'Good News':
+            tileColor = '#2ed573'; // Green
+            break;
+        case 'Info':
+            tileColor = '#54a0ff'; // Blue
+            break;
+        default:
+            console.log(`Unknown notification type: ${tile.notification_type}, using default color`);
+    }
+    
+    // Apply the color to the tile container
+    tileContainer.style.backgroundColor = tileColor;
+    
+    // Set text color for better contrast
+    tileContainer.style.color = (tile.notification_type === 'Alert' || tile.notification_type === 'Warning') 
+        ? '#ffffff'  // White text for dark backgrounds
+        : '#333333'; // Dark text for light backgrounds
+    
+    // Update tile content
+    const content = tileContainer.querySelector('.map-section-content');
+    if (content) {
+        // Create or update the data display
+        let dataDisplay = content.querySelector('.tile-data');
+        if (!dataDisplay) {
+            dataDisplay = document.createElement('div');
+            dataDisplay.className = 'tile-data';
+            content.appendChild(dataDisplay);
         }
         
-        // Apply the color to the tile container (with !important to override any other styles)
-        console.log(`Applying background color ${tileColor} to tile ${tile.tile_name}`);
-        tileContainer.setAttribute('style', `background-color: ${tileColor} !important`);
+        // Display all tile data
+        dataDisplay.innerHTML = `
+            <div class="tile-info" style="padding: 10px; background-color: rgba(255, 255, 255, 0.9); border-radius: 5px; margin-top: 10px; color: #333;">
+                <p><strong>ID:</strong> ${tile.id || 'N/A'}</p>
+                <p><strong>Name:</strong> ${tile.name || 'N/A'}</p>
+                <p><strong>Category:</strong> ${tile.category || 'N/A'}</p>
+                <p><strong>Color:</strong> ${tile.color || 'N/A'}</p>
+                <p><strong>Title:</strong> ${tile.title || 'N/A'}</p>
+                <p><strong>Description:</strong> ${tile.description || 'N/A'}</p>
+                <p><strong>Metrics:</strong> ${tile.metrics ? JSON.stringify(tile.metrics, null, 2) : 'N/A'}</p>
+                <p><strong>Created At:</strong> ${tile.created_at ? new Date(tile.created_at).toLocaleString() : 'N/A'}</p>
+                <p><strong>Updated At:</strong> ${tile.updated_at ? new Date(tile.updated_at).toLocaleString() : 'N/A'}</p>
+            </div>
+        `;
         
-        // Also set text color for better contrast
-        if (tile.notification_type === 'Alert' || tile.notification_type === 'Warning') {
-            tileContainer.style.color = '#ffffff'; // White text for dark backgrounds
-        } else {
-            tileContainer.style.color = '#333333'; // Dark text for light backgrounds
-        }
-        
-        // Update tile content
-        const content = tileContainer.querySelector('.map-section-content');
-        if (content) {
-            // Create or update the data display
-            let dataDisplay = content.querySelector('.tile-data');
-            if (!dataDisplay) {
-                dataDisplay = document.createElement('div');
-                dataDisplay.className = 'tile-data';
-                content.appendChild(dataDisplay);
-            }
-            
-            // Display the tile data with a clear visual style
-            dataDisplay.innerHTML = `
-                <div class="tile-info" style="padding: 10px; background-color: rgba(255, 255, 255, 0.9); border-radius: 5px; margin-top: 10px; color: #333;">
-                    <p><strong>Notification:</strong> ${tile.notification_type || 'N/A'}</p>
-                    <p><strong>Motion:</strong> ${tile.motion || 'N/A'}</p>
-                    <p><strong>Customer:</strong> ${tile.customer || 'N/A'}</p>
-                    <p><strong>Issue:</strong> ${tile.issue || 'N/A'}</p>
-                </div>
-            `;
-            
-            // Add a debug marker to see which tiles were updated
-            const debugMarker = document.createElement('div');
-            debugMarker.style.position = 'absolute';
-            debugMarker.style.top = '5px';
-            debugMarker.style.right = '5px';
-            debugMarker.style.padding = '2px 5px';
-            debugMarker.style.backgroundColor = 'black';
-            debugMarker.style.color = 'white';
-            debugMarker.style.fontSize = '10px';
-            debugMarker.style.borderRadius = '3px';
-            debugMarker.textContent = 'Updated';
-            tileContainer.style.position = 'relative';
-            tileContainer.appendChild(debugMarker);
-        } else {
-            console.error(`Could not find content for tile ${tile.tile_name}`);
-        }
-    } else {
-        console.error(`Could not find container for tile ${tile.tile_name}`);
+        // Add update timestamp
+        const timestamp = document.createElement('div');
+        timestamp.style.fontSize = '10px';
+        timestamp.style.color = '#666';
+        timestamp.style.marginTop = '5px';
+        timestamp.textContent = `Last updated: ${new Date().toLocaleString()}`;
+        dataDisplay.appendChild(timestamp);
     }
 }
 
 // Update tiles when the page loads
 document.addEventListener('DOMContentLoaded', updateTileData);
 
-// Update tiles every 30 seconds
-setInterval(updateTileData, 30000); 
+// Update tiles every 5 seconds
+setInterval(updateTileData, 5000);

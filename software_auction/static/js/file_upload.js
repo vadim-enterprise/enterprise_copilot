@@ -27,10 +27,8 @@ class FileUpload {
             const response = await fetch('http://127.0.0.1:8001/api/files/upload-csv', {
                 method: 'POST',
                 body: formData,
-                headers: {
-                    'X-CSRFToken': this.getCookie('csrftoken')
-                },
-                credentials: 'include'
+                credentials: 'include',
+                mode: 'cors'
             });
 
             if (!response.ok) {
@@ -40,6 +38,9 @@ class FileUpload {
             const result = await response.json();
             this.showNotification('File uploaded successfully!', 'success');
             console.log('Upload result:', result);
+            
+            // Handle the response and refresh tiles if needed
+            handleCsvUploadResponse(result);
         } catch (error) {
             console.error('Upload error:', error);
             this.showNotification('Error uploading file: ' + error.message, 'error');
@@ -71,6 +72,13 @@ class FileUpload {
             }
         }
         return cookieValue;
+    }
+}
+
+function handleCsvUploadResponse(response) {
+    if (response && response.should_refresh) {
+        // Trigger an immediate tile update
+        updateTileData();
     }
 }
 

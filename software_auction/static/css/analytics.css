@@ -1,0 +1,122 @@
+/* Analytics Results Styling */
+
+.analysis-section {
+    margin-bottom: 20px;
+    padding: 15px;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.analysis-section h4 {
+    margin-top: 0;
+    color: #2c3e50;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+}
+
+.analysis-type {
+    margin-bottom: 15px;
+    font-size: 16px;
+    color: #3498db;
+    padding: 5px 0;
+}
+
+.anomaly-section {
+    border-left: 4px solid #e74c3c;
+}
+
+.clustering-section {
+    border-left: 4px solid #2ecc71;
+}
+
+.time-series-section {
+    border-left: 4px solid #3498db;
+}
+
+.anomaly-count, .cluster-count {
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.stats-info {
+    margin: 10px 0;
+}
+
+.stats-info ul {
+    list-style-type: none;
+    padding-left: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.stats-info li {
+    padding: 5px 10px;
+    margin: 3px;
+    background-color: #eee;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.trend-info {
+    margin-bottom: 10px;
+    font-size: 16px;
+}
+
+.forecast-info {
+    margin: 10px 0;
+    padding: 10px;
+    background-color: #f0f7fb;
+    border-left: 4px solid #5bc0de;
+    font-size: 14px;
+}
+
+.plot-container {
+    margin: 15px 0;
+    text-align: center;
+}
+
+.analytics-plot {
+    max-width: 100%;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.error-message {
+    color: #721c24;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 4px;
+    padding: 10px 15px;
+    margin-bottom: 15px;
+}
+
+.analytics-loader {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(255, 255, 255, 0.9);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    text-align: center;
+}
+
+.spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #3498db;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 2s linear infinite;
+    margin: 0 auto 10px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
