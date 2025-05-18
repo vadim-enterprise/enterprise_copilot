@@ -6,13 +6,11 @@ class Chatbot {
         this.input = this.widget.querySelector('.chatbot-input input');
         this.sendButton = this.widget.querySelector('.send-button');
         this.toggleButton = this.widget.querySelector('.chatbot-toggle');
-        this.voiceBotToggle = this.widget.querySelector('.voice-bot-toggle');
-        this.micButton = this.widget.querySelector('.mic-button');
+        this.voiceBotButton = document.getElementById('voice-bot-button');
         
         // Initialize state
         this.isMinimized = false;
         this.isProcessing = false;
-        this.isVoiceMode = false;
         this.isRecording = false;
         this.mediaRecorder = null;
         this.audioChunks = [];
@@ -51,11 +49,10 @@ class Chatbot {
             }
         });
 
-        // Voice bot toggle
-        this.voiceBotToggle.addEventListener('click', () => this.toggleVoiceMode());
-
-        // Microphone button
-        this.micButton.addEventListener('click', () => this.toggleRecording());
+        // Voice bot button
+        if (this.voiceBotButton) {
+            this.voiceBotButton.addEventListener('click', () => this.toggleRecording());
+        }
     }
 
     toggleChatbot() {
@@ -191,33 +188,18 @@ class Chatbot {
         }
     }
 
-    toggleVoiceMode() {
-        this.isVoiceMode = !this.isVoiceMode;
-        this.voiceBotToggle.classList.toggle('voice-bot-active', this.isVoiceMode);
-        this.micButton.style.display = this.isVoiceMode ? 'flex' : 'none';
-        this.showNotification(
-            this.isVoiceMode ? 'Voice mode activated' : 'Voice mode deactivated',
-            'info'
-        );
-    }
-
     async toggleRecording() {
-        if (!this.isVoiceMode) {
-            this.showNotification('Please activate voice mode first', 'warning');
-            return;
-        }
-
         if (!this.isRecording) {
             // Start recording
             this.isRecording = true;
-            this.micButton.classList.add('recording');
+            this.voiceBotButton.classList.add('recording');
             this.audioChunks = [];
             this.mediaRecorder.start();
             this.showNotification('Recording...', 'info');
         } else {
             // Stop recording
             this.isRecording = false;
-            this.micButton.classList.remove('recording');
+            this.voiceBotButton.classList.remove('recording');
             this.mediaRecorder.stop();
             this.showNotification('Processing audio...', 'info');
         }

@@ -87,10 +87,11 @@
         <!-- Centered Search -->
         <div class="search-container">
             <div class="search-box">
-                <input type="text" id="webSearchInput" placeholder="Search something...">
+                <input type="text" id="webSearchInput" placeholder="Hi there">
                 <button id="webSearchButton" type="button">
                     <span class="search-icon">🔍</span>
                 </button>
+                <button id="voice-bot-button" class="mic-button" title="Start/Stop Recording">🎙️</button>
                 <button id="uploadCsvButton" type="button" title="Upload CSV">
                     <span class="upload-icon">📁</span>
                 </button>
@@ -99,26 +100,11 @@
         </div>
     </main>
 
-    <!-- Chatbot Widget -->
-    <div id="chatbot-widget" class="chatbot-widget">
-        <div class="chatbot-header">
-            <h3>AI Assistant</h3>
-            <button class="chatbot-toggle">−</button>
-        </div>
-        <div class="chatbot-body">
-            <div class="chatbot-messages"></div>
-            <div class="chatbot-input">
-                <input type="text" placeholder="Type your message...">
-                <button class="voice-bot-toggle" title="Toggle Voice Mode">🎤</button>
-                <button class="mic-button" title="Start/Stop Recording" style="display: none;">🎙️</button>
-                <button class="send-button">Send</button>
-            </div>
-        </div>
-    </div>
-
     <!-- JavaScript -->
     <script src="{% static 'js/search.js' %}"></script>
-    <script src="{% static 'js/chatbot.js' %}"></script>
+    <script src="{% static 'js/tiles.js' %}"></script>
+    <script src="{% static 'js/upload.js' %}"></script>
+    <script src="{% static 'js/voice.js' %}"></script>
     <script src="{% static 'js/speech_manager.js' %}"></script>
     <script src="{% static 'js/file_upload.js' %}"></script>
     <script src="{% static 'js/map_visualization.js' %}"></script>

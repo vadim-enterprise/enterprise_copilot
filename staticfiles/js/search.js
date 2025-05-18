@@ -136,7 +136,7 @@ async function addToKnowledgeBase(result) {
 class WebSearch {
     constructor() {
         // Define API endpoints
-        this.chatEndpoint = 'http://127.0.0.1:8001/api/chat/query';
+        this.chatEndpoint = 'http://127.0.0.1:8001/api/rag/text_query';
         this.webSearchEndpoint = 'http://127.0.0.1:8001/api/websearch/search';
         
         // Get DOM elements
@@ -234,18 +234,6 @@ class WebSearch {
                         d3.select(this)
                             .attr('fill', '#e0e0e0');
                     });
-
-                // Add state names
-                svg.append('g')
-                    .selectAll('text')
-                    .data(states.features)
-                    .enter()
-                    .append('text')
-                    .attr('x', d => path.centroid(d)[0])
-                    .attr('y', d => path.centroid(d)[1])
-                    .attr('text-anchor', 'middle')
-                    .attr('font-size', '8px')
-                    .text(d => d.properties.name);
 
                 // Add tooltip
                 const tooltip = d3.select('#map')
@@ -351,8 +339,7 @@ class WebSearch {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    query,
-                    use_web_search: true
+                    query: query
                 })
             });
 

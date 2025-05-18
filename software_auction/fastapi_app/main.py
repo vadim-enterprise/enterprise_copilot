@@ -1,6 +1,7 @@
 import os
 import sys
 from pathlib import Path
+import logging
 
 # Load environment variables
 from software_auction.fastapi_app.utils.env_loader import load_env_variables
@@ -38,17 +39,17 @@ import tempfile
 import shutil
 from datetime import datetime
 from sqlalchemy import create_engine, text
-from sqlalchemy.exc import SQLAlchemyError
+from django.conf import settings
 
 # Create a router for speech-related endpoints
 from fastapi import APIRouter
-rag_router = APIRouter()
+from .routers.rag_router import rag_router
+from .rag.rag_service import RAGService
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    stream=sys.stdout
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
@@ -65,7 +66,6 @@ app.add_middleware(
 )
 
 # Initialize services
-from .rag.rag_service import RAGService
 rag_service = RAGService()
 analytics_service = AnalyticsService()
 websearch_service = WebSearchService()
@@ -74,7 +74,6 @@ websearch_service = WebSearchService()
 openai_client = OpenAI()
 
 # Get model settings from Django settings
-from django.conf import settings
 GPT_MODEL = settings.GPT_MODEL_NAME
 
 # Database connection
@@ -85,6 +84,7 @@ engine = create_engine(DATABASE_URL)
 app.include_router(websearch_router.router, prefix="/api/websearch", tags=["websearch"])
 app.include_router(speech_router, prefix="/api/speech", tags=["speech"])
 app.include_router(tile_router, prefix="/api", tags=["tiles"])
+app.include_router(rag_router, prefix="/api/rag", tags=["rag"])
 
 # File handling endpoints
 def get_db_connection():
@@ -258,98 +258,6 @@ async def enrich_knowledge_base(request: Request):
             "status": "error",
             "message": str(e)
         }
-
-@rag_router.options("/text_query")
-async def text_query_options():
-    """Handle OPTIONS request for CORS preflight"""
-    return Response(
-        status_code=200,
-        headers={
-            "Access-Control-Allow-Origin": "http://127.0.0.1:8000",
-            "Access-Control-Allow-Methods": "POST, OPTIONS",
-            "Access-Control-Allow-Headers": "*",
-            "Access-Control-Allow-Credentials": "true"
-        },
-    )
-
-@rag_router.post("/text_query")
-async def text_query(request: Request):
-    """Handle text mode queries"""
-    try:
-        data = await request.json()
-        query = data.get("query")
-        
-        if not query:
-            return JSONResponse(
-                status_code=400,
-                content={"status": "error", "message": "No query provided"}
-            )
-        
-        # Check if the query requires data analysis
-        analysis_keywords = ['analyze', 'analysis', 'sql', 'python', 'data', 'database', 'query', 'table', 'column', 'select', 'from', 'where', 'join']
-        requires_analysis = any(keyword in query.lower() for keyword in analysis_keywords)
-        
-        if requires_analysis:
-            # Use RAG service for data analysis queries
-            try:
-                response = await rag_service.process_query(query)
-                return JSONResponse(
-                    status_code=200,
-                    content={"status": "success", "response": response}
-                )
-            except Exception as e:
-                error_message = str(e).lower()
-                # Check for common database/table not found errors
-                if any(err in error_message for err in [
-                    "relation", "does not exist", "no such table", 
-                    "table not found", "database not found", "csv_data"
-                ]):
-                    logger.info("Database/table not found, falling back to general chat")
-                    # Fall back to general chat processing
-                    return await process_general_query(query)
-                else:
-                    logger.error(f"Error in data analysis query: {str(e)}")
-                    return JSONResponse(
-                        status_code=500,
-                        content={"status": "error", "message": f"Error processing data analysis query: {str(e)}"}
-                    )
-        else:
-            # Use OpenAI directly for general questions
-            return await process_general_query(query)
-                
-    except Exception as e:
-        logger.error(f"Error in text_query: {str(e)}")
-        return JSONResponse(
-            status_code=500,
-            content={"status": "error", "message": str(e)}
-        )
-
-async def process_general_query(query: str) -> JSONResponse:
-    """Process a general query using ChatGPT"""
-    try:
-        response = openai_client.chat.completions.create(
-            model=GPT_MODEL,
-            messages=[
-                {"role": "system", "content": "You are a helpful AI assistant. Provide clear, concise, and accurate responses to user questions."},
-                {"role": "user", "content": query}
-            ],
-            temperature=settings.DEFAULT_TEMPERATURE,
-            max_tokens=settings.DEFAULT_MAX_TOKENS
-        )
-        
-        return JSONResponse(
-            status_code=200,
-            content={
-                "status": "success",
-                "response": response.choices[0].message.content
-            }
-        )
-    except Exception as e:
-        logger.error(f"Error processing general query: {str(e)}")
-        return JSONResponse(
-            status_code=500,
-            content={"status": "error", "message": "Error processing query"}
-        )
 
 @rag_router.get("/text_instructions")
 async def get_text_instructions():
@@ -579,19 +487,6 @@ async def audio_query(request: Request):
             }
         )
 
-@app.options("/api/rag/text_query")
-async def text_query_options():
-    """Handle OPTIONS request for CORS preflight"""
-    return JSONResponse(
-        status_code=200,
-        headers={
-            "Access-Control-Allow-Origin": "http://127.0.0.1:8000",
-            "Access-Control-Allow-Methods": "POST, OPTIONS",
-            "Access-Control-Allow-Headers": "*",
-            "Access-Control-Allow-Credentials": "false"
-        }
-    )
-
 @app.get("/api/tiles")
 async def get_tiles():
     """Fetch tiles from tile_analytics table"""
@@ -623,7 +518,3 @@ async def get_tiles():
     except Exception as e:
         logger.error(f"Error fetching tiles: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)

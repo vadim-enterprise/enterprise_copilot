@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException, Response
 import logging
 from pydantic import BaseModel
 from typing import Optional, List
@@ -58,6 +58,19 @@ async def text_query(request: Request):
             "status": "error",
             "message": str(e)
         }
+
+@rag_router.options("/text_query")
+async def text_query_options():
+    """Handle OPTIONS request for CORS preflight"""
+    return Response(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "http://127.0.0.1:8000",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+            "Access-Control-Allow-Credentials": "true"
+        },
+    )
 
 @rag_router.post("/add-to-kb")
 async def add_to_kb(request: Request):

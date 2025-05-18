@@ -605,16 +605,16 @@ class AnalyticsService:
                 }
             elif customer_satisfaction and customer_satisfaction < LOW_SATISFACTION_THRESHOLD:
                 return {
-                            'category': 'satisfaction_risk',
-                            'color': 'orange',
-                            'title': 'Low Customer Satisfaction',
-                            'description': f'Customer satisfaction is {customer_satisfaction:.1%}. Needs improvement.',
-                            'metrics': {
-                                'customer_satisfaction': customer_satisfaction,
-                                'churn_rate': churn_rate,
-                                'revenue': metrics.get('revenue_millions')
-                            }
-                        }
+                    'category': 'satisfaction_risk',
+                    'color': 'orange',
+                    'title': 'Low Customer Satisfaction',
+                    'description': f'Customer satisfaction is {customer_satisfaction:.1%}. Needs improvement.',
+                    'metrics': {
+                        'customer_satisfaction': customer_satisfaction,
+                        'churn_rate': churn_rate,
+                        'revenue': metrics.get('revenue_millions')
+                    }
+                }
             return None
         except Exception as e:
             self.logger.error(f"Error determining tile characteristics: {str(e)}")

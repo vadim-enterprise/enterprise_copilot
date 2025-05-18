@@ -1,3 +1,40 @@
+// Function to setup tile interactions
+function setupTileInteractions() {
+    const tiles = document.querySelectorAll('.map-section');
+    const overlay = document.createElement('div');
+    overlay.className = 'tile-overlay';
+    document.body.appendChild(overlay);
+
+    const closeButton = document.createElement('button');
+    closeButton.className = 'close-tile';
+    closeButton.innerHTML = '×';
+    document.body.appendChild(closeButton);
+
+    tiles.forEach(tile => {
+        tile.addEventListener('click', () => {
+            // Remove active class from all tiles
+            tiles.forEach(t => t.classList.remove('active'));
+            
+            // Add active class to clicked tile
+            tile.classList.add('active');
+            overlay.classList.add('active');
+            closeButton.classList.add('active');
+        });
+    });
+
+    function closeActiveTile() {
+        const activeTile = document.querySelector('.map-section.active');
+        if (activeTile) {
+            activeTile.classList.remove('active');
+        }
+        overlay.classList.remove('active');
+        closeButton.classList.remove('active');
+    }
+
+    closeButton.addEventListener('click', closeActiveTile);
+    overlay.addEventListener('click', closeActiveTile);
+}
+
 // Function to fetch and update tile data
 async function updateTileData() {
     try {
@@ -142,8 +179,11 @@ async function updateTileData() {
     }
 }
 
-// Update tiles when the page loads
-document.addEventListener('DOMContentLoaded', updateTileData);
+// Initialize when the page loads
+document.addEventListener('DOMContentLoaded', () => {
+    setupTileInteractions();
+    updateTileData();
+});
 
 // Update tiles every 5 seconds
 setInterval(updateTileData, 5000);
